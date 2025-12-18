@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Load Board - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+    <h1>Load Board</h1>
+    <a href="{{ url_for('dispatch.create_load') }}" class="btn btn-primary">+ Post Load</a>
+</div>
+
+<div style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-xl);">
+    <p class="text-muted">📦 No loads available. Check back soon or post a new load.</p>
+</div>
+{% endblock %}
+
