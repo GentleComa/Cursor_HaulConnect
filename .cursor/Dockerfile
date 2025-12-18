@@ -13,8 +13,10 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user (may already exist in recent Ubuntu images)
-RUN id ubuntu &>/dev/null || useradd -m -s /bin/bash ubuntu
+# Create non-root user and ensure home directory exists with correct ownership
+RUN (id ubuntu &>/dev/null || useradd -m -s /bin/bash ubuntu) \
+    && mkdir -p /home/ubuntu \
+    && chown ubuntu:ubuntu /home/ubuntu
 
 # Set user and working directory
 USER ubuntu
