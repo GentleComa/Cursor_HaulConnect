@@ -1,18 +1,14 @@
 """
-HaulConnect Application Entry Point
+HaulConnect Application Factory
 
-Run this file to start the Flask development server:
-    python app.py
-
-For production, use a WSGI server like Gunicorn:
-    gunicorn -w 4 -b 0.0.0.0:5000 "app:create_app()"
+Creates and configures the Flask application instance.
 """
 
 import os
 from flask import Flask, render_template
 
 from config import config
-from extensions import db, login_manager, csrf
+from extensions import db, migrate, login_manager, csrf
 
 
 def create_app(config_name=None):
@@ -42,24 +38,40 @@ def create_app(config_name=None):
     
     # Initialize extensions with app
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    # Import models to register them with SQLAlchemy
-    import models  # noqa: F401
-    
-    # Register routes
-    from routes import register_routes
-    register_routes(app)
+    # Register blueprints
+    register_blueprints(app)
     
     # Register error handlers
     register_error_handlers(app)
+    
+    # Import models to register them with SQLAlchemy and Flask-Login
+    # This must happen before db.create_all() so tables are created,
+    # and registers the @login_manager.user_loader callback
+    from app import models  # noqa: F401
     
     # Create database tables
     with app.app_context():
         db.create_all()
     
     return app
+
+
+def register_blueprints(app):
+    """Register all application blueprints."""
+    
+    from app.auth import auth_bp
+    from app.messaging import messaging_bp
+    from app.dispatch import dispatch_bp
+    from app.main import main_bp
+    
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(messaging_bp, url_prefix='/messaging')
+    app.register_blueprint(dispatch_bp, url_prefix='/dispatch')
 
 
 def register_error_handlers(app):
@@ -78,13 +90,3 @@ def register_error_handlers(app):
     def forbidden_error(error):
         return render_template('errors/403.html'), 403
 
-
-# Create application instance (for WSGI servers)
-app = create_app()
-
-if __name__ == '__main__':
-    app.run(
-        host='0.0.0.0',
-        port=int(os.environ.get('PORT', 5001)),
-        debug=app.config.get('DEBUG', False)
-    )

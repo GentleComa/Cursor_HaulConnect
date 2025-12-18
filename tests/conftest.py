@@ -17,7 +17,6 @@ spec = importlib.util.spec_from_file_location("app_module", os.path.join(project
 app_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(app_module)
 create_app = app_module.create_app
-
 from extensions import db
 
 

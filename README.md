@@ -49,26 +49,22 @@ HaulConnect/
 ### Installation
 
 1. **Clone the repository**
-
    ```bash
    cd Cursor_HaulConnect
    ```
 
 2. **Create a virtual environment**
-
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
-
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Set up environment variables**
-
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
@@ -76,7 +72,6 @@ HaulConnect/
    ```
 
 5. **Run the application**
-
    ```bash
    python app.py
    ```
@@ -100,13 +95,11 @@ Environment variables (set in `.env`):
 ## Development
 
 ### Running Tests
-
 ```bash
 pytest tests/
 ```
 
 ### Database Migrations
-
 ```bash
 # Initialize migrations (first time only)
 flask db init
