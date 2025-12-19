@@ -174,27 +174,38 @@ def get_messages(load_id):
     """
     Get messages for a specific load.
     
-    Only accessible to the assigned shipper or driver.
-    Only available when load status is near_pickup, ready, or in_transit.
+    Accessible to:
+    - Assigned shipper or driver (only during active statuses)
+    - Admins (any status, all messages)
     """
     load = Load.query.get_or_404(load_id)
     
-    # Verify user is shipper or driver
-    if current_user.id not in [load.shipper_id, load.driver_id]:
-        abort(403)
+    # Admins can access all messages regardless of status
+    is_admin = current_user.has_admin_access()
     
-    # Only allow messaging during active statuses
-    if load.status not in [LoadStatus.NEAR_PICKUP.value, LoadStatus.READY.value, LoadStatus.IN_TRANSIT.value]:
-        abort(403)
+    if not is_admin:
+        # Verify user is shipper or driver
+        if current_user.id not in [load.shipper_id, load.driver_id]:
+            abort(403)
+        
+        # Only allow messaging during active statuses for non-admins
+        if load.status not in [LoadStatus.NEAR_PICKUP.value, LoadStatus.READY.value, LoadStatus.IN_TRANSIT.value]:
+            abort(403)
     
-    # Get 50 most recent messages
-    messages = Message.query.filter_by(load_id=load_id)\
-        .order_by(Message.timestamp.desc())\
-        .limit(50)\
-        .all()
+    # Get messages (all for admins, last 50 for regular users)
+    if is_admin:
+        messages = Message.query.filter_by(load_id=load_id)\
+            .order_by(Message.timestamp.asc())\
+            .all()
+    else:
+        messages = Message.query.filter_by(load_id=load_id)\
+            .order_by(Message.timestamp.desc())\
+            .limit(50)\
+            .all()
+        # Reverse to show oldest first for non-admins
+        messages = list(reversed(messages))
     
-    # Reverse to show oldest first
-    return jsonify([m.to_dict() for m in reversed(messages)])
+    return jsonify([m.to_dict() for m in messages])
 
 
 @api_bp.route('/messages/<int:load_id>', methods=['POST'])

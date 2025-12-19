@@ -6,7 +6,7 @@ Administrative functions and management interface.
 
 from functools import wraps
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -169,6 +169,104 @@ def cancel_load(load_id):
     
     flash(f'Load {load.reference_number} has been cancelled.', 'success')
     return redirect(url_for('admin.shipments'))
+
+
+@admin_bp.route('/shipments/<int:load_id>')
+@login_required
+@admin_required
+def shipment_detail(load_id):
+    """
+    Admin-specific shipment detail view.
+    
+    Shows map, message history, and admin notes.
+    """
+    from models.load_note import LoadNote
+    from models.message import Message
+    
+    from sqlalchemy.orm import joinedload
+    
+    load = Load.query.options(
+        joinedload(Load.shipper),
+        joinedload(Load.driver)
+    ).get_or_404(load_id)
+    
+    # Fetch all messages for this load (no status restrictions for admins)
+    # Eager load sender and receiver relationships
+    messages = Message.query.options(
+        joinedload(Message.sender),
+        joinedload(Message.receiver)
+    ).filter_by(load_id=load_id)\
+        .order_by(Message.timestamp.asc())\
+        .all()
+    
+    # Fetch all admin notes for this load with admin relationship
+    notes = LoadNote.query.options(
+        joinedload(LoadNote.admin)
+    ).filter_by(load_id=load_id)\
+        .order_by(LoadNote.created_at.desc())\
+        .all()
+    
+    return render_template('admin/shipment_detail.html', 
+                         load=load, 
+                         messages=messages,
+                         notes=notes)
+
+
+@admin_bp.route('/shipments/<int:load_id>/notes', methods=['POST'])
+@login_required
+@admin_required
+def add_shipment_note(load_id):
+    """Add an admin note to a shipment."""
+    from models.load_note import LoadNote
+    
+    load = Load.query.get_or_404(load_id)
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Note content cannot be empty.', 'error')
+        return redirect(url_for('admin.shipment_detail', load_id=load_id))
+    
+    note = LoadNote(
+        load_id=load.id,
+        admin_id=current_user.id,
+        content=content
+    )
+    
+    db.session.add(note)
+    db.session.commit()
+    
+    flash('Note added successfully.', 'success')
+    return redirect(url_for('admin.shipment_detail', load_id=load_id))
+
+
+@admin_bp.route('/shipments/<int:load_id>/notes/<int:note_id>', methods=['DELETE', 'POST'])
+@login_required
+@admin_required
+def delete_shipment_note(load_id, note_id):
+    """Delete an admin note (only by the note creator or any admin)."""
+    from models.load_note import LoadNote
+    
+    load = Load.query.get_or_404(load_id)
+    note = LoadNote.query.get_or_404(note_id)
+    
+    # Verify note belongs to this load
+    if note.load_id != load.id:
+        abort(404)
+    
+    # Allow deletion if user is the note creator or any admin
+    if note.admin_id != current_user.id:
+        # Still allow any admin to delete any note
+        if not current_user.has_admin_access():
+            abort(403)
+    
+    db.session.delete(note)
+    db.session.commit()
+    
+    if request.method == 'DELETE' or request.headers.get('Content-Type') == 'application/json':
+        return jsonify({'status': 'success', 'message': 'Note deleted successfully'}), 200
+    
+    flash('Note deleted successfully.', 'success')
+    return redirect(url_for('admin.shipment_detail', load_id=load_id))
 
 
 @admin_bp.route('/idle-alerts')

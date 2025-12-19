@@ -55,8 +55,20 @@ def create_app(config_name=None):
     # Register error handlers
     register_error_handlers(app)
     
+    # Add template context processor to make config available in templates
+    @app.context_processor
+    def inject_config():
+        return dict(config=app.config)
+    
     # Create database tables
     with app.app_context():
+        # Ensure instance directory exists for SQLite
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        if db_uri.startswith('sqlite:///'):
+            db_path = db_uri[10:]  # Remove 'sqlite:///'
+            db_dir = os.path.dirname(db_path)
+            if db_dir and not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
         db.create_all()
     
     return app
@@ -83,8 +95,10 @@ def register_error_handlers(app):
 app = create_app()
 
 if __name__ == '__main__':
+    # Use port from environment variable or default to 5001 (5000 is often used by AirPlay on macOS)
+    port = int(os.environ.get('PORT', 5001))
     app.run(
         host='0.0.0.0',
-        port=int(os.environ.get('PORT', 5001)),
+        port=port,
         debug=app.config.get('DEBUG', False)
     )

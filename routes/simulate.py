@@ -10,7 +10,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 import random
 
-from extensions import db
+from extensions import db, csrf
 from models.user import User
 from models.load import Load, LoadStatus
 from models.payment import Payment, PaymentStatus
@@ -50,8 +50,14 @@ def dev_only(f):
 @simulate_bp.before_request
 def restrict_to_debug():
     """Restrict all simulate routes to DEBUG mode only."""
-    if not current_app.config.get('DEBUG', False):
-        abort(403)
+    debug_mode = current_app.config.get('DEBUG', False)
+    if not debug_mode:
+        from flask import jsonify
+        return jsonify({
+            'error': 'DEBUG mode required',
+            'DEBUG': debug_mode,
+            'message': 'Simulation routes are only available when DEBUG=True. Current DEBUG value: ' + str(debug_mode)
+        }), 403
 
 
 @simulate_bp.route('/create-test-users', methods=['POST'])
@@ -254,19 +260,17 @@ def reset_database():
 
 @simulate_bp.route('/dev-dashboard')
 @login_required
-@role_required('driver')
+@admin_required
 @dev_only
 def dev_dashboard():
     """
     Developer dashboard for simulating load dispatch flow.
     
-    Only available in DEBUG mode and only for drivers.
-    Shows all loads assigned to the current driver.
+    Only available in DEBUG mode and only for admins.
+    Shows all active loads in the system.
     """
-    # Get all loads assigned to current driver that are not delivered or cancelled
-    assigned_loads = Load.query.filter_by(
-        driver_id=current_user.id
-    ).filter(
+    # Show all active loads
+    assigned_loads = Load.query.filter(
         Load.status.notin_([LoadStatus.DELIVERED.value, LoadStatus.CANCELLED.value])
     ).order_by(Load.created_at.desc()).all()
     
@@ -277,6 +281,7 @@ def dev_dashboard():
 @login_required
 @admin_required
 @dev_only
+@csrf.exempt
 def create_bulk_shipments_route(count):
     """
     Create bulk simulated shipments.
@@ -289,14 +294,15 @@ def create_bulk_shipments_route(count):
     try:
         from utils.bulk_simulator import SIMULATION_LOGS, generate_simulation_report
         
-        shipments, run_id = create_bulk_shipments(count)
+        # Run simulation with 5 minute total duration (300 seconds)
+        shipments, run_id = create_bulk_shipments(count, total_duration_seconds=300.0)
         
         # Generate report
         report = generate_simulation_report(run_id)
         
         return jsonify({
             'status': 'success',
-            'message': f'Created {len(shipments)} simulated shipments',
+            'message': f'Created {len(shipments)} simulated shipments over 5 minutes',
             'run_id': run_id,
             'shipments': shipments,
             'report': report
@@ -432,20 +438,15 @@ def download_simulation_report(run_id):
 
 @simulate_bp.route('/advance/<int:load_id>', methods=['POST'])
 @login_required
-@role_required('driver')
+@admin_required
 @dev_only
 def advance_status(load_id):
     """
     Advance a load's status to the next stage.
     
-    Only available in DEBUG mode and only for the assigned driver.
+    Only available in DEBUG mode and only for admins.
     """
     load = Load.query.get_or_404(load_id)
-    
-    # Verify load is assigned to current driver
-    if load.driver_id != current_user.id:
-        flash('You can only advance loads assigned to you.', 'error')
-        return redirect(url_for('simulate.dev_dashboard'))
     
     # Check if load can be advanced
     if load.status == LoadStatus.DELIVERED.value:

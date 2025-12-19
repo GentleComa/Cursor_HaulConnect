@@ -8,10 +8,14 @@
 <!-- Status Filter -->
 <div style="margin-bottom: var(--space-lg);">
     <a href="{{ url_for('admin.shipments') }}" class="btn btn-outline" style="margin-right: var(--space-sm);">All</a>
-    <a href="{{ url_for('admin.shipments', status='posted') }}" class="btn btn-outline" style="margin-right: var(--space-sm);">Posted</a>
-    <a href="{{ url_for('admin.shipments', status='assigned') }}" class="btn btn-outline" style="margin-right: var(--space-sm);">Assigned</a>
-    <a href="{{ url_for('admin.shipments', status='in_transit') }}" class="btn btn-outline" style="margin-right: var(--space-sm);">In Transit</a>
-    <a href="{{ url_for('admin.shipments', status='delivered') }}" class="btn btn-outline" style="margin-right: var(--space-sm);">Delivered</a>
+    <a href="{{ url_for('admin.shipments', status='posted') }}" class="btn btn-outline"
+        style="margin-right: var(--space-sm);">Posted</a>
+    <a href="{{ url_for('admin.shipments', status='assigned') }}" class="btn btn-outline"
+        style="margin-right: var(--space-sm);">Assigned</a>
+    <a href="{{ url_for('admin.shipments', status='in_transit') }}" class="btn btn-outline"
+        style="margin-right: var(--space-sm);">In Transit</a>
+    <a href="{{ url_for('admin.shipments', status='delivered') }}" class="btn btn-outline"
+        style="margin-right: var(--space-sm);">Delivered</a>
     <a href="{{ url_for('admin.shipments', status='cancelled') }}" class="btn btn-outline">Cancelled</a>
 </div>
 
@@ -34,14 +38,16 @@
             <tr style="border-bottom: 1px solid var(--color-border);">
                 <td style="padding: var(--space-sm); font-family: var(--font-mono);">{{ load.id }}</td>
                 <td style="padding: var(--space-sm);">
-                    <a href="{{ url_for('loads.detail', load_id=load.id) }}" style="color: var(--color-primary); font-family: var(--font-mono);">
+                    <a href="{{ url_for('admin.shipment_detail', load_id=load.id) }}"
+                        style="color: var(--color-primary); font-family: var(--font-mono);">
                         {{ load.reference_number }}
                     </a>
                 </td>
                 <td style="padding: var(--space-sm);">{{ load.shipper.full_name if load.shipper else 'N/A' }}</td>
                 <td style="padding: var(--space-sm);">{{ load.driver.full_name if load.driver else 'Unassigned' }}</td>
                 <td style="padding: var(--space-sm); font-size: 0.9rem;">
-                    {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state }}
+                    {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{
+                    load.destination_state }}
                 </td>
                 <td style="padding: var(--space-sm);">
                     <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
@@ -54,13 +60,15 @@
                         {{ load.status|replace('_', ' ')|title }}
                     </span>
                 </td>
-                <td style="padding: var(--space-sm); text-align: right; font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</td>
+                <td style="padding: var(--space-sm); text-align: right; font-family: var(--font-mono);">${{
+                    "%.2f"|format(load.rate) }}</td>
                 <td style="padding: var(--space-sm);">
                     {% if load.status not in ['delivered', 'cancelled'] %}
-                    <form method="POST" action="{{ url_for('admin.cancel_load', load_id=load.id) }}" style="display: inline;">
+                    <form method="POST" action="{{ url_for('admin.cancel_load', load_id=load.id) }}"
+                        style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-danger" style="padding: 4px 12px; font-size: 0.85rem;" 
-                                onclick="return confirm('Are you sure you want to cancel this load?');">Cancel</button>
+                        <button type="submit" class="btn btn-danger" style="padding: 4px 12px; font-size: 0.85rem;"
+                            onclick="return confirm('Are you sure you want to cancel this load?');">Cancel</button>
                     </form>
                     {% else %}
                     <span class="text-muted" style="font-size: 0.85rem;">—</span>
@@ -70,20 +78,21 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     {% if pagination.pages > 1 %}
     <div style="margin-top: var(--space-lg); display: flex; justify-content: center; gap: var(--space-sm);">
         {% if pagination.has_prev %}
-        <a href="{{ url_for('admin.shipments', page=pagination.prev_num, status=status) }}" class="btn btn-outline">Previous</a>
+        <a href="{{ url_for('admin.shipments', page=pagination.prev_num, status=status) }}"
+            class="btn btn-outline">Previous</a>
         {% endif %}
         <span style="padding: var(--space-sm) var(--space-md); color: var(--color-text-muted);">
             Page {{ pagination.page }} of {{ pagination.pages }}
         </span>
         {% if pagination.has_next %}
-        <a href="{{ url_for('admin.shipments', page=pagination.next_num, status=status) }}" class="btn btn-outline">Next</a>
+        <a href="{{ url_for('admin.shipments', page=pagination.next_num, status=status) }}"
+            class="btn btn-outline">Next</a>
         {% endif %}
     </div>
     {% endif %}
 </div>
 {% endblock %}
-

@@ -1,29 +1,9 @@
-# HaulConnect Dependencies
-# Install with: pip install -r requirements.txt
-
-# Core Framework
-Flask>=3.0.0
-Werkzeug>=3.0.1
-
-# Database
-Flask-SQLAlchemy>=3.1.1
+Flask==3.0.0
 SQLAlchemy>=2.0.36
-
-# Database Migrations
-Flask-Migrate>=4.0.5
-alembic>=1.13.0
-
-# User Authentication
-Flask-Login>=0.6.3
-
-# Forms and Validation
-Flask-WTF>=1.2.1
-WTForms>=3.1.1
-email-validator>=2.1.0
-
-# Security
-python-dotenv>=1.0.0
-
-# Production WSGI Server
-gunicorn>=21.2.0
-
+Flask-SQLAlchemy>=3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.1
+python-dotenv==1.0.0
+Werkzeug==3.0.1
+gunicorn==21.2.0

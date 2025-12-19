@@ -75,7 +75,15 @@ def login():
                     return redirect(next_page)
                 else:
                     flash('Welcome back! (Passwordless mode)', 'success')
-                    return redirect(url_for('dashboard.index'))
+                    # Role-based redirect
+                    if user.has_admin_access():
+                        return redirect(url_for('admin.dashboard'))
+                    elif user.role == 'shipper':
+                        return redirect(url_for('dashboard.index'))
+                    elif user.role == 'driver':
+                        return redirect(url_for('loads.driver_board'))
+                    else:
+                        return redirect(url_for('dashboard.index'))
             else:
                 flash('Invalid email or account is inactive.', 'error')
         else:
@@ -94,7 +102,15 @@ def login():
                     return redirect(next_page)
                 else:
                     flash('Welcome back!', 'success')
-                    return redirect(url_for('dashboard.index'))
+                    # Role-based redirect
+                    if user.has_admin_access():
+                        return redirect(url_for('admin.dashboard'))
+                    elif user.role == 'shipper':
+                        return redirect(url_for('dashboard.index'))
+                    elif user.role == 'driver':
+                        return redirect(url_for('loads.driver_board'))
+                    else:
+                        return redirect(url_for('dashboard.index'))
             else:
                 flash('Invalid email or password.', 'error')
     

@@ -85,7 +85,19 @@ class Config:
     # Default uses instance/ directory (Flask convention) to keep database files separate
     # Alternative 1: Automatic normalization - converts root-level SQLite paths to instance/
     _raw_db_url = os.getenv("DATABASE_URL") or os.getenv("SQLITE_DATABASE_URL", "sqlite:///instance/haulconnect.db")
-    SQLALCHEMY_DATABASE_URI = _normalize_sqlite_path(_raw_db_url)
+    _normalized_url = _normalize_sqlite_path(_raw_db_url)
+    # Convert to absolute path to handle spaces in directory names
+    if _normalized_url.startswith('sqlite:///'):
+        db_path = _normalized_url[10:]  # Remove 'sqlite:///'
+        if not os.path.isabs(db_path):
+            # Make path absolute to avoid issues with spaces in directory names
+            import os as os_module
+            abs_db_path = os_module.path.abspath(db_path)
+            SQLALCHEMY_DATABASE_URI = f"sqlite:///{abs_db_path}"
+        else:
+            SQLALCHEMY_DATABASE_URI = _normalized_url
+    else:
+        SQLALCHEMY_DATABASE_URI = _normalized_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Flask settings
@@ -110,8 +122,9 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_ECHO = True  # Log SQL queries
     
-    # Allow passwordless auth in development (can be overridden via env var)
-    AUTH_PASSWORD_REQUIRED = os.getenv("AUTH_PASSWORD_REQUIRED", "false").lower() == "true"
+    # Require passwords in development (can be overridden via env var)
+    # Set to "false" in env var if you want passwordless mode for testing
+    AUTH_PASSWORD_REQUIRED = os.getenv("AUTH_PASSWORD_REQUIRED", "true").lower() == "true"
 
 
 class TestingConfig(Config):

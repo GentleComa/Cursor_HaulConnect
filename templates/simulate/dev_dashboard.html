@@ -171,12 +171,30 @@
         resultDiv.innerHTML = '<div class="text-muted">Creating shipments...</div>';
 
         try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
             const response = await fetch(`/simulate/create-bulk/${count}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 }
             });
+
+            if (!response.ok) {
+                // Try to parse as JSON, but if it fails, show the response text
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                } catch (e) {
+                    const text = await response.text();
+                    errorMessage = text.substring(0, 200) || errorMessage;
+                }
+                resultDiv.innerHTML = `<div class="text-danger">Error: ${errorMessage}</div>`;
+                return;
+            }
 
             const data = await response.json();
 

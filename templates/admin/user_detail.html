@@ -20,7 +20,7 @@
                 <button type="submit" class="btn btn-success">Verify User</button>
             </form>
             {% endif %}
-            <form method="POST" action="{{ url_for('admin.toggle_user_status', user_id=user.id) }}">
+            <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn {{ 'btn-danger' if user.is_active else 'btn-primary' }}">
                     {{ 'Deactivate' if user.is_active else 'Activate' }}
@@ -28,8 +28,9 @@
             </form>
         </div>
     </div>
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-xl); margin-top: var(--space-xl);">
+
+    <div
+        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-xl); margin-top: var(--space-xl);">
         <div>
             <div class="text-muted" style="font-size: 0.9rem;">Role</div>
             <div style="font-weight: 500;">{{ user.role|title }}</div>
@@ -37,7 +38,8 @@
         <div>
             <div class="text-muted" style="font-size: 0.9rem;">Status</div>
             <div style="font-weight: 500;">
-                {% if user.is_active %}<span class="text-success">Active</span>{% else %}<span class="text-danger">Inactive</span>{% endif %}
+                {% if user.is_active %}<span class="text-success">Active</span>{% else %}<span
+                    class="text-danger">Inactive</span>{% endif %}
                 {% if user.is_verified %} • <span class="text-success">Verified</span>{% endif %}
             </div>
         </div>
@@ -66,4 +68,3 @@
     </div>
 </div>
 {% endblock %}
-

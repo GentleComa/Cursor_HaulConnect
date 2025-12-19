@@ -182,8 +182,8 @@
     // Refresh button
     document.getElementById('refresh-btn').addEventListener('click', loadMapData);
 
-    // Auto-refresh every 10 seconds
+    // Auto-refresh every 2 seconds for real-time simulation viewing
     loadMapData();
-    setInterval(loadMapData, 10000);
+    setInterval(loadMapData, 2000);
 </script>
 {% endblock %}

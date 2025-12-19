@@ -13,6 +13,8 @@ def role_required(*roles):
     """
     Decorator to require specific user roles.
     
+    Admins with has_admin_access() can bypass role restrictions.
+    
     Usage:
         @role_required('shipper', 'broker')
         def my_route():
@@ -29,6 +31,10 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for('auth.login'))
+            
+            # Admins can access any role-restricted route
+            if hasattr(current_user, 'has_admin_access') and current_user.has_admin_access():
+                return f(*args, **kwargs)
             
             # Check if user has one of the required roles
             user_role = current_user.role
