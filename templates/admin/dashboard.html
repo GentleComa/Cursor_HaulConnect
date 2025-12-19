@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - HaulConnect{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Admin Dashboard</h1>
+
+<!-- Stats -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-xl);">
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Total Users</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">{{ stats.total_users }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Drivers</div>
+        <div style="font-size: 2rem; font-weight: 700;">{{ stats.total_drivers }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Shippers/Brokers</div>
+        <div style="font-size: 2rem; font-weight: 700;">{{ stats.total_shippers }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Total Loads</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-info);">{{ stats.total_loads }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Active Loads</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-warning);">{{ stats.active_loads }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">In Transit</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-warning);">{{ stats.in_transit_loads }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Completed</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);">{{ stats.completed_loads }}</div>
+    </div>
+    {% if stats.total_payments is defined %}
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Total Payments</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);">{{ stats.total_payments }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Links -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl);">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-outline" style="justify-content: center;">Manage Users</a>
+    <a href="{{ url_for('admin.shipments') }}" class="btn btn-outline" style="justify-content: center;">Manage
+        Shipments</a>
+    <a href="{{ url_for('admin.idle_alerts') }}" class="btn btn-outline" style="justify-content: center;">Idle
+        Alerts</a>
+    <a href="{{ url_for('admin.payments') }}" class="btn btn-outline" style="justify-content: center;">View Payments</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl);">
+    <!-- Recent Users -->
+    <div class="card">
+        <h3 style="margin-bottom: var(--space-lg);">Recent Users</h3>
+        {% for user in recent_users %}
+        <div
+            style="display: flex; justify-content: space-between; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
+            <div>
+                <div style="font-weight: 500;">{{ user.full_name }}</div>
+                <div class="text-muted" style="font-size: 0.85rem;">{{ user.email }}</div>
+            </div>
+            <span
+                style="padding: 2px 8px; background: var(--color-primary-muted); color: var(--color-primary); border-radius: 4px; font-size: 0.8rem; height: fit-content;">{{
+                user.role }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Recent Loads -->
+    <div class="card">
+        <h3 style="margin-bottom: var(--space-lg);">Recent Loads</h3>
+        {% for load in recent_loads %}
+        <div
+            style="display: flex; justify-content: space-between; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
+            <div>
+                <div style="font-weight: 500; font-family: var(--font-mono);">{{ load.reference_number }}</div>
+                <div class="text-muted" style="font-size: 0.85rem;">{{ load.route_summary }}</div>
+            </div>
+            <span style="font-family: var(--font-mono); color: var(--color-success);">${{ "%.0f"|format(load.rate)
+                }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

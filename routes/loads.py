@@ -447,6 +447,30 @@ def driver_accept(load_id):
         return redirect(url_for('loads.driver_board'))
     
     load.assign_driver(current_user)
+    
+    # Automatically send introductory message from driver to shipper (only once)
+    from models.message import Message
+    from datetime import datetime
+    
+    # Check if intro message already exists to prevent duplicates
+    existing_intro = Message.query.filter_by(
+        load_id=load.id,
+        sender_id=load.driver_id,
+        receiver_id=load.shipper_id
+    ).filter(
+        Message.content.like('%accepted your load%')
+    ).first()
+    
+    if not existing_intro:
+        intro_msg = Message(
+            load_id=load.id,
+            sender_id=load.driver_id,
+            receiver_id=load.shipper_id,
+            content="👋 Hi! I've accepted your load. Looking forward to working with you.",
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(intro_msg)
+    
     db.session.commit()
     
     flash('Load accepted successfully!', 'success')
@@ -486,6 +510,30 @@ def book(load_id):
         return redirect(url_for('loads.detail', load_id=load_id))
     
     load.assign_driver(current_user)
+    
+    # Automatically send introductory message from driver to shipper (only once)
+    from models.message import Message
+    from datetime import datetime
+    
+    # Check if intro message already exists to prevent duplicates
+    existing_intro = Message.query.filter_by(
+        load_id=load.id,
+        sender_id=load.driver_id,
+        receiver_id=load.shipper_id
+    ).filter(
+        Message.content.like('%accepted your load%')
+    ).first()
+    
+    if not existing_intro:
+        intro_msg = Message(
+            load_id=load.id,
+            sender_id=load.driver_id,
+            receiver_id=load.shipper_id,
+            content="👋 Hi! I've accepted your load. Looking forward to working with you.",
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(intro_msg)
+    
     db.session.commit()
     
     flash('Load booked successfully!', 'success')

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Simulation Map View - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg); display: flex; justify-content: space-between; align-items: center;">
+    <h1>Simulation Map View</h1>
+    <div style="display: flex; gap: var(--space-md);">
+        <a href="{{ url_for('simulate.dev_dashboard') }}" class="btn btn-outline">Dev Dashboard</a>
+        <button id="refresh-btn" class="btn btn-primary">Refresh Map</button>
+    </div>
+</div>
+
+<div class="card"
+    style="margin-bottom: var(--space-lg); padding: var(--space-md); background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3);">
+    <strong>⚠️ Development Mode Only</strong> - This simulation tool is only available in DEBUG mode.
+</div>
+
+<!-- Map Container -->
+<div id="map"
+    style="height: 600px; width: 100%; border-radius: var(--radius-md); overflow: hidden; margin-bottom: var(--space-lg);">
+</div>
+
+<!-- Legend -->
+<div class="card">
+    <h3 style="margin-bottom: var(--space-md);">Legend</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 50%;"></div>
+            <span>En Route to Pickup</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div style="width: 20px; height: 20px; background: #f59e0b; border-radius: 50%;"></div>
+            <span>At Pickup</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%;"></div>
+            <span>In Transit</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div style="width: 20px; height: 20px; background: #8b5cf6; border-radius: 50%;"></div>
+            <span>Idle</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div style="width: 20px; height: 20px; background: #6b7280; border-radius: 50%;"></div>
+            <span>Delivered</span>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet.js -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Initialize map centered on Texas
+    const map = L.map('map').setView([31.0, -99.0], 6);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let markers = {};
+    let routes = {};
+
+    function getStatusColor(status, idleStatus) {
+        if (idleStatus === 'idle_15' || idleStatus === 'idle_30') {
+            return '#8b5cf6'; // Purple for idle
+        }
+        switch (status) {
+            case 'posted':
+            case 'assigned':
+            case 'accepted':
+                return '#3b82f6'; // Blue - en route to pickup
+            case 'near_pickup':
+            case 'ready':
+                return '#f59e0b'; // Orange - at pickup
+            case 'in_transit':
+                return '#10b981'; // Green - in transit
+            case 'delivered':
+                return '#6b7280'; // Gray - delivered
+            default:
+                return '#6b7280';
+        }
+    }
+
+    function updateMap(loads) {
+        // Clear existing markers and routes
+        Object.values(markers).forEach(marker => map.removeLayer(marker));
+        Object.values(routes).forEach(route => map.removeLayer(route));
+        markers = {};
+        routes = {};
+
+        loads.forEach(load => {
+            if (!load.origin_lat || !load.origin_lng || !load.dest_lat || !load.dest_lng) {
+                return; // Skip loads without coordinates
+            }
+
+            const color = getStatusColor(load.status, load.idle_status);
+
+            // Create pickup marker
+            const pickupMarker = L.marker([load.origin_lat, load.origin_lng], {
+                icon: L.divIcon({
+                    className: 'pickup-marker',
+                    html: `<div style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [12, 12]
+                })
+            }).addTo(map);
+
+            pickupMarker.bindPopup(`
+            <strong>Pickup</strong><br>
+            Load: ${load.reference_number}<br>
+            Status: ${load.status}
+        `);
+
+            // Create dropoff marker
+            const dropoffMarker = L.marker([load.dest_lat, load.dest_lng], {
+                icon: L.divIcon({
+                    className: 'dropoff-marker',
+                    html: `<div style="background: #ef4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [12, 12]
+                })
+            }).addTo(map);
+
+            dropoffMarker.bindPopup(`
+            <strong>Dropoff</strong><br>
+            Load: ${load.reference_number}<br>
+            Status: ${load.status}
+        `);
+
+            // Create driver current location marker (if available)
+            if (load.current_lat && load.current_lng) {
+                const driverMarker = L.marker([load.current_lat, load.current_lng], {
+                    icon: L.divIcon({
+                        className: 'driver-marker',
+                        html: `<div style="background: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map);
+
+                const progress = (load.progress * 100).toFixed(0);
+                driverMarker.bindPopup(`
+                <strong>Driver Location</strong><br>
+                Load ID: ${load.id}<br>
+                Reference: ${load.reference_number}<br>
+                Driver: ${load.driver_name} (ID: ${load.driver_id})<br>
+                Status: ${load.status}<br>
+                Progress: ${progress}%<br>
+                ${load.idle_status ? `Idle: ${load.idle_status}` : ''}
+            `);
+
+                markers[`driver_${load.id}`] = driverMarker;
+            }
+
+            // Draw route line
+            const routeLine = L.polyline(
+                [[load.origin_lat, load.origin_lng], [load.dest_lat, load.dest_lng]],
+                { color: color, weight: 2, opacity: 0.5, dashArray: '5, 5' }
+            ).addTo(map);
+
+            routes[`route_${load.id}`] = routeLine;
+
+            markers[`pickup_${load.id}`] = pickupMarker;
+            markers[`dropoff_${load.id}`] = dropoffMarker;
+        });
+    }
+
+    // Load initial data
+    async function loadMapData() {
+        try {
+            const response = await fetch('/simulate/api/map-data');
+            if (response.ok) {
+                const data = await response.json();
+                updateMap(data.loads);
+            }
+        } catch (error) {
+            console.error('Error loading map data:', error);
+        }
+    }
+
+    // Refresh button
+    document.getElementById('refresh-btn').addEventListener('click', loadMapData);
+
+    // Auto-refresh every 10 seconds
+    loadMapData();
+    setInterval(loadMapData, 10000);
+</script>
+{% endblock %}

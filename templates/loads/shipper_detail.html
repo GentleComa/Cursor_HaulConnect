@@ -112,5 +112,192 @@
         {% endif %}
     </div>
 </div>
+
+{% if load.status in ['near_pickup', 'ready', 'in_transit'] %}
+<!-- Messaging Section -->
+<div class="card" style="margin-top: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-lg);">Messages</h3>
+    
+    <div id="messages-container" style="max-height: 400px; overflow-y: auto; margin-bottom: var(--space-lg); padding: var(--space-md); background: var(--color-bg-elevated); border-radius: var(--radius-md);">
+        <div id="messages-list"></div>
+    </div>
+    
+    <form id="message-form">
+        <div style="margin-bottom: var(--space-md);">
+            <textarea id="message-content" placeholder="Type your message..." rows="3" 
+                      style="width: 100%; padding: var(--space-sm) var(--space-md); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); resize: vertical;"></textarea>
+        </div>
+        <div style="margin-bottom: var(--space-md);">
+            <input type="file" id="photo-input" accept="image/*" style="display: none;">
+            <button type="button" id="photo-button" class="btn btn-outline" style="margin-right: var(--space-sm);">
+                📷 Add Photo
+            </button>
+            <span id="photo-preview" style="font-size: 0.9rem; color: var(--color-text-muted);"></span>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Message</button>
+    </form>
+</div>
+
+<script>
+const loadId = {{ load.id }};
+const currentUserId = {{ current_user.id }};
+let pollInterval;
+
+// Load messages
+async function loadMessages() {
+    try {
+        const response = await fetch(`/api/messages/${loadId}`);
+        if (response.ok) {
+            const messages = await response.json();
+            displayMessages(messages);
+        }
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Display messages
+function displayMessages(messages) {
+    const container = document.getElementById('messages-list');
+    container.innerHTML = '';
+    
+    messages.forEach(msg => {
+        const isOwn = msg.sender_id === currentUserId;
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: ${isOwn ? 'flex-end' : 'flex-start'};
+        `;
+        
+        const isSystem = msg.is_system || msg.sender_id === null;
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `
+            max-width: 70%;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-md);
+            background: ${isSystem ? 'var(--color-bg-elevated)' : (isOwn ? 'var(--color-primary)' : 'var(--color-bg-elevated)')};
+            color: ${isOwn && !isSystem ? 'white' : 'var(--color-text)'};
+            ${isSystem ? 'border: 1px solid var(--color-border); font-style: italic;' : ''}
+        `;
+        
+        if (!isOwn && !isSystem) {
+            const senderName = document.createElement('div');
+            senderName.style.cssText = 'font-size: 0.85rem; font-weight: 500; margin-bottom: var(--space-xs);';
+            senderName.textContent = msg.sender_name;
+            bubble.appendChild(senderName);
+        } else if (isSystem) {
+            const systemLabel = document.createElement('div');
+            systemLabel.style.cssText = 'font-size: 0.75rem; font-weight: 500; margin-bottom: var(--space-xs); color: var(--color-text-muted);';
+            systemLabel.textContent = 'System';
+            bubble.appendChild(systemLabel);
+        }
+        
+        if (msg.content) {
+            const content = document.createElement('div');
+            content.textContent = msg.content;
+            bubble.appendChild(content);
+        }
+        
+        if (msg.photo_url) {
+            const img = document.createElement('img');
+            img.src = msg.photo_url;
+            img.style.cssText = 'max-width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-xs);';
+            img.alt = 'Photo attachment';
+            bubble.appendChild(img);
+        }
+        
+        const timestamp = document.createElement('div');
+        timestamp.style.cssText = 'font-size: 0.75rem; opacity: 0.7; margin-top: var(--space-xs);';
+        const date = new Date(msg.timestamp);
+        timestamp.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        bubble.appendChild(timestamp);
+        
+        messageDiv.appendChild(bubble);
+        container.appendChild(messageDiv);
+    });
+    
+    // Scroll to bottom
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Send message
+document.getElementById('message-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const content = document.getElementById('message-content').value.trim();
+    const photoInput = document.getElementById('photo-input');
+    let photoB64 = null;
+    
+    if (photoInput.files.length > 0) {
+        const file = photoInput.files[0];
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            photoB64 = event.target.result.split(',')[1]; // Remove data:image/...;base64, prefix
+            await sendMessage(content, photoB64);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        await sendMessage(content, null);
+    }
+});
+
+async function sendMessage(content, photoB64) {
+    if (!content && !photoB64) {
+        alert('Please enter a message or attach a photo');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/messages/${loadId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: content || null,
+                photo: photoB64
+            })
+        });
+        
+        if (response.ok) {
+            document.getElementById('message-content').value = '';
+            document.getElementById('photo-input').value = '';
+            document.getElementById('photo-preview').textContent = '';
+            loadMessages();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || 'Failed to send message'));
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message');
+    }
+}
+
+// Photo input handler
+document.getElementById('photo-button').addEventListener('click', () => {
+    document.getElementById('photo-input').click();
+});
+
+document.getElementById('photo-input').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        document.getElementById('photo-preview').textContent = `📷 ${e.target.files[0].name}`;
+    }
+});
+
+// Start polling
+loadMessages();
+pollInterval = setInterval(loadMessages, 10000); // Poll every 10 seconds
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+});
+</script>
+{% endif %}
 {% endblock %}
 

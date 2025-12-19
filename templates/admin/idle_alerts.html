@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Idle Alerts - HaulConnect Admin{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Idle Alerts</h1>
+
+{% if alerts|length == 0 %}
+<div class="card">
+    <p class="text-muted" style="text-align: center; padding: var(--space-xl);">
+        {% if not alerts %}
+        No idle alerts at this time.
+        {% else %}
+        Idle monitoring is not currently implemented. This feature requires idle_status and idle_log fields on the Load model.
+        {% endif %}
+    </p>
+</div>
+{% else %}
+<div class="card">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Load ID</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Reference</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Driver</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Route</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Idle Status</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Time Since</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for load in alerts %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="padding: var(--space-sm); font-family: var(--font-mono);">{{ load.id }}</td>
+                <td style="padding: var(--space-sm);">
+                    <a href="{{ url_for('loads.detail', load_id=load.id) }}" style="color: var(--color-primary); font-family: var(--font-mono);">
+                        {{ load.reference_number }}
+                    </a>
+                </td>
+                <td style="padding: var(--space-sm);">{{ load.driver.full_name if load.driver else 'Unassigned' }}</td>
+                <td style="padding: var(--space-sm); font-size: 0.9rem;">
+                    {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state }}
+                </td>
+                <td style="padding: var(--space-sm);">
+                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: var(--color-danger);">
+                        {{ load.idle_status|upper if hasattr(load, 'idle_status') else 'N/A' }}
+                    </span>
+                </td>
+                <td style="padding: var(--space-sm);">
+                    {% if hasattr(load, 'last_movement_timestamp') and load.last_movement_timestamp %}
+                        {% set idle_time = (now() - load.last_movement_timestamp).total_seconds() / 60 %}
+                        {{ idle_time|int }} min
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td style="padding: var(--space-sm);">
+                    <form method="POST" action="{{ url_for('admin.resolve_idle_alert', load_id=load.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success" style="padding: 4px 12px; font-size: 0.85rem;">
+                            Resolve
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
+

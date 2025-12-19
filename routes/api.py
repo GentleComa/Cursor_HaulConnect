@@ -5,12 +5,16 @@ RESTful API endpoints for mobile and third-party integrations.
 """
 
 from datetime import datetime
+import os
+import uuid
+import base64
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
 
 from extensions import db
 from models.load import Load, LoadStatus
 from models.user import User
+from models.message import Message
 
 api_bp = Blueprint('api', __name__)
 
@@ -98,6 +102,8 @@ def update_tracking(load_id):
         abort(403)
     
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON data'}), 400
     
     load.current_lat = data.get('lat')
     load.current_lng = data.get('lng')
@@ -127,6 +133,8 @@ def get_profile():
 def get_quote():
     """Get a freight quote estimate."""
     data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON data'}), 400
     
     origin = data.get('origin')
     destination = data.get('destination')
@@ -158,4 +166,116 @@ def get_quote():
         'distance': distance,
         'equipment': equipment
     })
+
+
+@api_bp.route('/messages/<int:load_id>', methods=['GET'])
+@login_required
+def get_messages(load_id):
+    """
+    Get messages for a specific load.
+    
+    Only accessible to the assigned shipper or driver.
+    Only available when load status is near_pickup, ready, or in_transit.
+    """
+    load = Load.query.get_or_404(load_id)
+    
+    # Verify user is shipper or driver
+    if current_user.id not in [load.shipper_id, load.driver_id]:
+        abort(403)
+    
+    # Only allow messaging during active statuses
+    if load.status not in [LoadStatus.NEAR_PICKUP.value, LoadStatus.READY.value, LoadStatus.IN_TRANSIT.value]:
+        abort(403)
+    
+    # Get 50 most recent messages
+    messages = Message.query.filter_by(load_id=load_id)\
+        .order_by(Message.timestamp.desc())\
+        .limit(50)\
+        .all()
+    
+    # Reverse to show oldest first
+    return jsonify([m.to_dict() for m in reversed(messages)])
+
+
+@api_bp.route('/messages/<int:load_id>', methods=['POST'])
+@login_required
+def send_message(load_id):
+    """
+    Send a message for a specific load.
+    
+    Only accessible to the assigned shipper or driver.
+    Only available when load status is near_pickup, ready, or in_transit.
+    Supports text and optional base64-encoded photo.
+    """
+    load = Load.query.get_or_404(load_id)
+    
+    # Verify user is shipper or driver
+    if current_user.id not in [load.shipper_id, load.driver_id]:
+        abort(403)
+    
+    # Only allow messaging during active statuses
+    if load.status not in [LoadStatus.NEAR_PICKUP.value, LoadStatus.READY.value, LoadStatus.IN_TRANSIT.value]:
+        abort(403)
+    
+    # Validate JSON data
+    data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON data'}), 400
+    
+    content = data.get('content', '').strip() if data.get('content') else None
+    photo_b64 = data.get('photo')
+    
+    # Require at least content or photo
+    if not content and not photo_b64:
+        return jsonify({'error': 'Message must contain text or photo'}), 400
+    
+    # Determine receiver (the other party)
+    if current_user.id == load.shipper_id:
+        receiver_id = load.driver_id
+    else:
+        receiver_id = load.shipper_id
+    
+    if receiver_id is None:
+        return jsonify({'error': 'Load must have both shipper and driver assigned'}), 400
+    
+    # Handle photo upload if provided
+    photo_url = None
+    if photo_b64:
+        try:
+            # Decode base64 image
+            image_data = base64.b64decode(photo_b64)
+            
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads', 'messages')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            filename = f"{uuid.uuid4().hex}.jpg"
+            filepath = os.path.join(upload_dir, filename)
+            
+            # Save image
+            with open(filepath, 'wb') as f:
+                f.write(image_data)
+            
+            photo_url = f"/static/uploads/messages/{filename}"
+        except Exception as e:
+            return jsonify({'error': f'Failed to process image: {str(e)}'}), 400
+    
+    # Create message
+    message = Message(
+        load_id=load_id,
+        sender_id=current_user.id,
+        receiver_id=receiver_id,
+        content=content,
+        photo_url=photo_url,
+        timestamp=datetime.utcnow()
+    )
+    
+    db.session.add(message)
+    db.session.commit()
+    
+    return jsonify({
+        'status': 'success',
+        'message': message.to_dict()
+    }), 200
 

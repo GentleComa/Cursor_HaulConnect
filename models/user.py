@@ -38,6 +38,7 @@ class User(UserMixin, db.Model):
     # Status
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)  # Admin access flag
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -92,8 +93,11 @@ class User(UserMixin, db.Model):
     def is_shipper(self):
         return self.role in ['shipper', 'broker']
     
-    def is_admin(self):
-        return self.role == 'admin'
+    def has_admin_access(self):
+        """Check if user has admin access (either by is_admin flag or admin role)."""
+        # Access the column value directly using getattr to avoid recursion
+        is_admin_flag = getattr(self, 'is_admin', False)
+        return is_admin_flag or self.role == 'admin'
 
 
 @login_manager.user_loader

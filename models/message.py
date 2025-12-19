@@ -70,19 +70,28 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Relationships
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    sender = db.relationship('User', backref='sent_messages')
+    # For load-based messaging (new system)
+    load_id = db.Column(db.Integer, db.ForeignKey('loads.id'), nullable=False, index=True)
+    # For conversation-based messaging (legacy, kept for backward compatibility)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=True)
+    
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Nullable for system messages
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
     
     # Content
-    content = db.Column(db.Text, nullable=False)
+    content = db.Column(db.Text, nullable=True)  # Nullable to allow photo-only messages
+    photo_url = db.Column(db.String(500))  # Path to uploaded image
     
     # Read status
     is_read = db.Column(db.Boolean, default=False)
     read_at = db.Column(db.DateTime)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Keep for backward compatibility
     
     def __repr__(self):
         return f'<Message {self.id}>'
@@ -92,4 +101,26 @@ class Message(db.Model):
         if not self.is_read:
             self.is_read = True
             self.read_at = datetime.utcnow()
+    
+    def to_dict(self):
+        """Convert message to dictionary for API responses."""
+        # Handle system messages (sender_id is None)
+        if self.sender_id is None:
+            sender_name = 'System'
+        elif self.sender:
+            sender_name = self.sender.full_name
+        else:
+            sender_name = 'Unknown'
+        
+        return {
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'receiver_id': self.receiver_id,
+            'sender_name': sender_name,
+            'is_system': self.sender_id is None,
+            'content': self.content,
+            'photo_url': self.photo_url,
+            'is_read': self.is_read,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else self.created_at.isoformat()
+        }
 

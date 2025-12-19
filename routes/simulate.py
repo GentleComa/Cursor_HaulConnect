@@ -15,6 +15,23 @@ from models.user import User
 from models.load import Load, LoadStatus
 from models.payment import Payment, PaymentStatus
 from utils.decorators import role_required
+from utils.bulk_simulator import create_bulk_shipments
+
+# Import admin_required from admin routes
+def admin_required(f):
+    """Decorator to require admin access."""
+    from functools import wraps
+    from flask import abort
+    from flask_login import current_user
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            from flask import redirect, url_for
+            return redirect(url_for('auth.login'))
+        if not current_user.has_admin_access():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 simulate_bp = Blueprint('simulate', __name__)
 
@@ -254,6 +271,163 @@ def dev_dashboard():
     ).order_by(Load.created_at.desc()).all()
     
     return render_template('simulate/dev_dashboard.html', loads=assigned_loads)
+
+
+@simulate_bp.route('/create-bulk/<int:count>', methods=['POST'])
+@login_required
+@admin_required
+@dev_only
+def create_bulk_shipments_route(count):
+    """
+    Create bulk simulated shipments.
+    
+    Only accessible by admins in DEBUG mode.
+    """
+    if count < 1 or count > 50:
+        return jsonify({'error': 'Count must be between 1 and 50'}), 400
+    
+    try:
+        from utils.bulk_simulator import SIMULATION_LOGS, generate_simulation_report
+        
+        shipments, run_id = create_bulk_shipments(count)
+        
+        # Generate report
+        report = generate_simulation_report(run_id)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Created {len(shipments)} simulated shipments',
+            'run_id': run_id,
+            'shipments': shipments,
+            'report': report
+        }), 200
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'message': f'Error creating shipments: {str(e)}',
+            'traceback': traceback.format_exc() if current_app.config.get('DEBUG') else None
+        }), 500
+
+
+@simulate_bp.route('/map-view')
+@login_required
+@admin_required
+@dev_only
+def map_view():
+    """
+    Map view showing all simulated shipments.
+    
+    Only accessible by admins in DEBUG mode.
+    """
+    # Get all active loads (not delivered or cancelled)
+    active_loads = Load.query.filter(
+        Load.status.notin_([LoadStatus.DELIVERED.value, LoadStatus.CANCELLED.value])
+    ).all()
+    
+    # Format loads for map display
+    map_loads = []
+    for load in active_loads:
+        map_loads.append({
+            'id': load.id,
+            'reference_number': load.reference_number,
+            'driver_id': load.driver_id,
+            'driver_name': load.driver.full_name if load.driver else 'Unassigned',
+            'status': load.status,
+            'origin_lat': load.origin_lat,
+            'origin_lng': load.origin_lng,
+            'dest_lat': load.dest_lat,
+            'dest_lng': load.dest_lng,
+            'current_lat': load.current_lat,
+            'current_lng': load.current_lng,
+            'idle_status': getattr(load, 'idle_status', None),
+            'progress': load.progress or 0.0
+        })
+    
+    return render_template('simulate/map_view.html', loads=map_loads)
+
+
+@simulate_bp.route('/api/map-data')
+@login_required
+@admin_required
+@dev_only
+def map_data():
+    """
+    API endpoint to get current map data (for polling).
+    """
+    active_loads = Load.query.filter(
+        Load.status.notin_([LoadStatus.DELIVERED.value, LoadStatus.CANCELLED.value])
+    ).all()
+    
+    map_loads = []
+    for load in active_loads:
+        map_loads.append({
+            'id': load.id,
+            'reference_number': load.reference_number,
+            'driver_id': load.driver_id,
+            'driver_name': load.driver.full_name if load.driver else 'Unassigned',
+            'status': load.status,
+            'origin_lat': load.origin_lat,
+            'origin_lng': load.origin_lng,
+            'dest_lat': load.dest_lat,
+            'dest_lng': load.dest_lng,
+            'current_lat': load.current_lat,
+            'current_lng': load.current_lng,
+            'idle_status': getattr(load, 'idle_status', None),
+            'progress': load.progress or 0.0
+        })
+    
+    return jsonify({'loads': map_loads})
+
+
+@simulate_bp.route('/report/latest')
+@simulate_bp.route('/report/<run_id>')
+@login_required
+@admin_required
+@dev_only
+def view_simulation_report(run_id=None):
+    """
+    View simulation report (HTML).
+    
+    Shows latest report if run_id is not provided.
+    """
+    from utils.bulk_simulator import generate_simulation_report, SIMULATION_LOGS
+    
+    report = generate_simulation_report(run_id)
+    
+    if "error" in report:
+        flash(report["error"], "error")
+        return redirect(url_for('simulate.dev_dashboard'))
+    
+    return render_template('simulate/report.html', report=report)
+
+
+@simulate_bp.route('/report/<run_id>/download')
+@login_required
+@admin_required
+@dev_only
+def download_simulation_report(run_id):
+    """
+    Download simulation report as JSON.
+    """
+    from flask import Response
+    from utils.bulk_simulator import generate_simulation_report
+    import json
+    
+    report = generate_simulation_report(run_id)
+    
+    if "error" in report:
+        return jsonify({"error": report["error"]}), 404
+    
+    json_str = json.dumps(report, indent=2)
+    
+    return Response(
+        json_str,
+        mimetype='application/json',
+        headers={
+            'Content-Disposition': f'attachment; filename=simulation_report_{run_id}.json'
+        }
+    )
 
 
 @simulate_bp.route('/advance/<int:load_id>', methods=['POST'])

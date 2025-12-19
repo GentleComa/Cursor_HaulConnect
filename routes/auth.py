@@ -128,9 +128,9 @@ def register():
         last_name = request.form.get('last_name')
         role = request.form.get('role', 'driver')
         
-        # Safety Rule: Prevent admin creation in passwordless mode
+        # Safety Rule: Prevent admin creation through registration
         # Admin accounts must be created manually in the database
-        if not password_required and role == 'admin':
+        if role == 'admin':
             flash('Admin accounts cannot be created through registration. Contact system administrator.', 'error')
             return render_template('auth/register.html', password_required=password_required)
         

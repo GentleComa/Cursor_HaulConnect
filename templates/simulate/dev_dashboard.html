@@ -17,6 +17,30 @@
     </div>
 </div>
 
+{% if current_user.has_admin_access() %}
+<!-- Bulk Simulation (Admin Only) -->
+<div class="card" style="margin-bottom: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-md);">Bulk Shipment Simulation</h3>
+    <p class="text-muted" style="margin-bottom: var(--space-md);">
+        Create multiple test shipments with full lifecycle simulation including messaging, idle alerts, and status
+        progression.
+    </p>
+    <form id="bulk-sim-form" style="display: flex; gap: var(--space-md); align-items: end;">
+        <div style="flex: 1;">
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Number of Shipments</label>
+            <input type="number" id="shipment-count" min="1" max="50" value="5"
+                style="width: 100%; padding: var(--space-sm) var(--space-md); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+        </div>
+        <button type="submit" class="btn btn-primary">Create Shipments</button>
+    </form>
+    <div id="bulk-sim-result" style="margin-top: var(--space-md);"></div>
+    <div style="margin-top: var(--space-md); display: flex; gap: var(--space-md);">
+        <a href="{{ url_for('simulate.map_view') }}" class="btn btn-outline">View Map</a>
+        <a href="{{ url_for('simulate.view_simulation_report') }}" class="btn btn-outline">View Latest Report</a>
+    </div>
+</div>
+{% endif %}
+
 <h1 style="margin-bottom: var(--space-xl);">My Assigned Loads</h1>
 
 {% if loads %}
@@ -129,5 +153,49 @@
         begin simulation.
     </p>
 </div>
+{% endif %}
+
+{% if current_user.has_admin_access() %}
+<script>
+    // Bulk simulation form
+    document.getElementById('bulk-sim-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const count = parseInt(document.getElementById('shipment-count').value);
+        const resultDiv = document.getElementById('bulk-sim-result');
+
+        if (count < 1 || count > 50) {
+            resultDiv.innerHTML = '<div class="text-danger">Count must be between 1 and 50</div>';
+            return;
+        }
+
+        resultDiv.innerHTML = '<div class="text-muted">Creating shipments...</div>';
+
+        try {
+            const response = await fetch(`/simulate/create-bulk/${count}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                resultDiv.innerHTML = `
+                <div class="text-success">
+                    <strong>Success!</strong> ${data.message}<br>
+                    <small>Created ${data.shipments.length} shipments. <a href="{{ url_for('simulate.map_view') }}">View on map</a></small>
+                </div>
+            `;
+                // Reload page after 2 seconds to show new loads
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                resultDiv.innerHTML = `<div class="text-danger">Error: ${data.message}</div>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="text-danger">Error: ${error.message}</div>`;
+        }
+    });
+</script>
 {% endif %}
 {% endblock %}
