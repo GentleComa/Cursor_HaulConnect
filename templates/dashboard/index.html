@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl);">
+    <h1>Dashboard</h1>
+    {% if current_user.is_shipper() %}
+    <a href="{{ url_for('loads.post') }}" class="btn btn-primary">+ Post New Load</a>
+    {% endif %}
+</div>
+
+<!-- Stats Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-xl);">
+    {% if current_user.is_driver() %}
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Assigned Loads</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">{{ stats.assigned }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">In Transit</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-info);">{{ stats.in_transit }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Completed</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-success);">{{ stats.completed }}</div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Posted Loads</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">{{ stats.posted }}</div>
+    </div>
+    <div class="card">
+        <div class="text-muted" style="font-size: 0.9rem;">Active Loads</div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--color-info);">{{ stats.active }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Loads -->
+<div class="card">
+    <h2 style="margin-bottom: var(--space-lg);">Recent Loads</h2>
+    
+    {% if recent_loads %}
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Reference</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Route</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Status</th>
+                <th style="text-align: right; padding: var(--space-sm); color: var(--color-text-muted);">Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for load in recent_loads %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="padding: var(--space-sm);">
+                    <a href="{{ url_for('loads.detail', load_id=load.id) }}" style="color: var(--color-primary);">
+                        {{ load.reference_number }}
+                    </a>
+                </td>
+                <td style="padding: var(--space-sm);">{{ load.route_summary }}</td>
+                <td style="padding: var(--space-sm);">
+                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
+                        {% if load.status == 'posted' %}background: var(--color-primary-muted); color: var(--color-primary);
+                        {% elif load.status == 'assigned' %}background: rgba(59, 130, 246, 0.2); color: var(--color-info);
+                        {% elif load.status == 'in_transit' %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                        {% elif load.status == 'delivered' %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                        {% endif %}">
+                        {{ load.status|replace('_', ' ')|title }}
+                    </span>
+                </td>
+                <td style="padding: var(--space-sm); text-align: right; font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No loads yet. {% if current_user.is_driver() %}Browse the <a href="{{ url_for('loads.board') }}" style="color: var(--color-primary);">load board</a> to find available freight.{% else %}Post your first load to get started.{% endif %}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

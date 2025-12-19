@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Quote Result - HaulConnect{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Freight Quote Result</h1>
+
+<div class="card" style="max-width: 600px;">
+    <div style="text-align: center; padding: var(--space-xl); background: var(--color-bg-elevated); border-radius: var(--radius-md); margin-bottom: var(--space-lg);">
+        <div style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: var(--space-sm);">Estimated Shipping Cost</div>
+        <div style="font-size: 3rem; font-weight: 700; color: var(--color-success); font-family: var(--font-mono);">${{ "%.2f"|format(estimated_cost) }}</div>
+    </div>
+    
+    <div style="margin-bottom: var(--space-lg);">
+        <h3 style="margin-bottom: var(--space-md);">Quote Details</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+            <div>
+                <div class="text-muted" style="font-size: 0.9rem;">Pickup ZIP</div>
+                <div style="font-weight: 500;">{{ pickup_zip }}</div>
+            </div>
+            <div>
+                <div class="text-muted" style="font-size: 0.9rem;">Dropoff ZIP</div>
+                <div style="font-weight: 500;">{{ dropoff_zip }}</div>
+            </div>
+            <div>
+                <div class="text-muted" style="font-size: 0.9rem;">Distance</div>
+                <div style="font-weight: 500;">{{ miles }} miles</div>
+            </div>
+            <div>
+                <div class="text-muted" style="font-size: 0.9rem;">Weight</div>
+                <div style="font-weight: 500;">{{ weight|int }} lbs</div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="display: flex; gap: var(--space-md);">
+        <a href="{{ url_for('loads.shipper_form') }}" class="btn btn-primary" style="flex: 1; justify-content: center;">
+            Post This Load
+        </a>
+        <a href="{{ url_for('loads.quote_form') }}" class="btn btn-outline">Get Another Quote</a>
+    </div>
+    
+    <p class="text-muted" style="margin-top: var(--space-lg); font-size: 0.85rem; text-align: center;">
+        This is an estimate. Final rates may vary based on market conditions and driver availability.
+    </p>
+</div>
+{% endblock %}
+

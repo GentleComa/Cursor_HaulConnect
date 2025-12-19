@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Get Freight Quote - HaulConnect{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Get Freight Quote</h1>
+
+<div class="card" style="max-width: 600px;">
+    <p class="text-muted" style="margin-bottom: var(--space-lg);">
+        Enter your shipment details to get an estimated shipping cost before posting your load.
+    </p>
+    
+    <form method="POST" action="{{ url_for('loads.quote_calculate') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-lg);">
+            <div>
+                <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Pickup ZIP Code *</label>
+                <input type="text" name="pickup_zip" required maxlength="10" placeholder="90210" 
+                       style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Dropoff ZIP Code *</label>
+                <input type="text" name="dropoff_zip" required maxlength="10" placeholder="10001"
+                       style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-lg);">
+            <div>
+                <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Mileage *</label>
+                <input type="number" name="miles" required min="40" max="400" placeholder="40-400"
+                       style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+                <small class="text-muted" style="font-size: 0.85rem;">Between 40-400 miles</small>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Weight (lbs) *</label>
+                <input type="number" name="weight" required min="500" max="28000" placeholder="500-28000"
+                       style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+                <small class="text-muted" style="font-size: 0.85rem;">Between 500-28,000 lbs</small>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: var(--space-md);">
+            <button type="submit" class="btn btn-primary">Calculate Quote</button>
+            <a href="{{ url_for('loads.shipper_list') }}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

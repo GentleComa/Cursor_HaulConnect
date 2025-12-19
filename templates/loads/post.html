@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Post Load - HaulConnect{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Post New Load</h1>
+
+<form method="POST" class="card" style="max-width: 800px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <h3 style="margin-bottom: var(--space-lg);">Origin</h3>
+    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-xl);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">City *</label>
+            <input type="text" name="origin_city" required style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">State *</label>
+            <input type="text" name="origin_state" required maxlength="2" placeholder="CA" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">ZIP</label>
+            <input type="text" name="origin_zip" maxlength="10" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+    
+    <h3 style="margin-bottom: var(--space-lg);">Destination</h3>
+    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-xl);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">City *</label>
+            <input type="text" name="destination_city" required style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">State *</label>
+            <input type="text" name="destination_state" required maxlength="2" placeholder="TX" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">ZIP</label>
+            <input type="text" name="destination_zip" maxlength="10" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+    
+    <h3 style="margin-bottom: var(--space-lg);">Load Details</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Equipment Type *</label>
+            <select name="equipment_type" required style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+                <option value="">Select...</option>
+                <option value="dry_van">Dry Van</option>
+                <option value="flatbed">Flatbed</option>
+                <option value="reefer">Reefer</option>
+                <option value="tanker">Tanker</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Weight (lbs)</label>
+            <input type="number" name="weight" min="0" max="80000" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Rate ($) *</label>
+            <input type="number" name="rate" required min="0" step="0.01" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-lg);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Pickup Date *</label>
+            <input type="date" name="pickup_date" required style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Commodity</label>
+            <input type="text" name="commodity" placeholder="e.g., Electronics, Food Products" style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+    
+    <div style="margin-bottom: var(--space-xl);">
+        <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Special Instructions</label>
+        <textarea name="special_instructions" rows="3" placeholder="Any special requirements or notes..." style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); font-family: inherit;"></textarea>
+    </div>
+    
+    <div style="display: flex; gap: var(--space-md);">
+        <button type="submit" class="btn btn-primary">Post Load</button>
+        <a href="{{ url_for('loads.board') }}" class="btn btn-outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+

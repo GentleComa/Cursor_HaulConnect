@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Load {{ load.reference_number }} - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg);">
+    <a href="{{ url_for('loads.shipper_list') }}" style="color: var(--color-text-muted);">← Back to My Loads</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-xl);">
+    <!-- Main Info -->
+    <div>
+        <div class="card" style="margin-bottom: var(--space-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-lg);">
+                <div>
+                    <span style="font-family: var(--font-mono); color: var(--color-primary); font-size: 1.2rem;">{{ load.reference_number }}</span>
+                    <span style="margin-left: var(--space-md); padding: 4px 12px; border-radius: 4px; font-size: 0.9rem;
+                        {% if load.status == 'posted' %}background: var(--color-primary-muted); color: var(--color-primary);
+                        {% elif load.status == 'accepted' or load.status == 'assigned' %}background: rgba(59, 130, 246, 0.2); color: var(--color-info);
+                        {% elif load.status == 'near_pickup' %}background: rgba(139, 92, 246, 0.2); color: var(--color-primary);
+                        {% elif load.status == 'ready' %}background: rgba(34, 197, 94, 0.2); color: var(--color-success);
+                        {% elif load.status == 'in_transit' %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                        {% elif load.status == 'delivered' %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                        {% elif load.status == 'cancelled' %}background: rgba(239, 68, 68, 0.2); color: var(--color-danger);
+                        {% endif %}">
+                        {{ load.status|replace('_', ' ')|title }}
+                    </span>
+                </div>
+            </div>
+            
+            <h2 style="font-size: 1.5rem; margin-bottom: var(--space-xl);">
+                {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state }}
+            </h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl);">
+                <div>
+                    <h3 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">PICKUP</h3>
+                    <div style="font-weight: 500;">{{ load.origin_city }}, {{ load.origin_state }} {{ load.origin_zip or '' }}</div>
+                    {% if load.origin_address %}<div class="text-muted">{{ load.origin_address }}</div>{% endif %}
+                    <div style="margin-top: var(--space-sm); color: var(--color-primary);">{{ load.pickup_date.strftime('%B %d, %Y') if load.pickup_date else 'TBD' }}</div>
+                </div>
+                <div>
+                    <h3 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">DELIVERY</h3>
+                    <div style="font-weight: 500;">{{ load.destination_city }}, {{ load.destination_state }} {{ load.destination_zip or '' }}</div>
+                    {% if load.destination_address %}<div class="text-muted">{{ load.destination_address }}</div>{% endif %}
+                    {% if load.delivery_date %}<div style="margin-top: var(--space-sm); color: var(--color-primary);">{{ load.delivery_date.strftime('%B %d, %Y') }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: var(--space-lg);">Load Details</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg);">
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Equipment Type</div>
+                    <div style="font-weight: 500;">{{ load.equipment_type|replace('_', ' ')|title }}</div>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Weight</div>
+                    <div style="font-weight: 500;">{{ load.weight|int if load.weight else 'N/A' }} lbs</div>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Distance</div>
+                    <div style="font-weight: 500;">{{ load.distance or 'N/A' }} miles</div>
+                </div>
+                {% if load.commodity %}
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Commodity</div>
+                    <div style="font-weight: 500;">{{ load.commodity }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if load.special_instructions %}
+            <div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+                <h4 style="margin-bottom: var(--space-sm);">Special Instructions</h4>
+                <p class="text-muted">{{ load.special_instructions }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div>
+        <div class="card" style="margin-bottom: var(--space-lg);">
+            <div style="text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-success); font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</div>
+                {% if load.rate_per_mile %}<div class="text-muted">${{ "%.2f"|format(load.rate_per_mile) }} per mile</div>{% endif %}
+            </div>
+            
+            {% if load.status == 'posted' %}
+            <form method="POST" action="{{ url_for('loads.update_status', load_id=load.id) }}" style="margin-top: var(--space-lg);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="status" value="cancelled">
+                <button type="submit" class="btn btn-danger" style="width: 100%; justify-content: center;">Cancel Load</button>
+            </form>
+            {% endif %}
+        </div>
+        
+        {% if load.driver %}
+        <div class="card">
+            <h4 style="margin-bottom: var(--space-md);">Assigned Driver</h4>
+            <div style="font-weight: 500;">{{ load.driver.full_name }}</div>
+            <div class="text-muted" style="font-size: 0.9rem;">{{ load.driver.email }}</div>
+            {% if load.driver.phone %}<div class="text-muted" style="font-size: 0.9rem;">{{ load.driver.phone }}</div>{% endif %}
+            {% if load.assigned_at %}<div class="text-muted" style="font-size: 0.85rem; margin-top: var(--space-sm);">Assigned: {{ load.assigned_at.strftime('%m/%d/%Y %H:%M') }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="card">
+            <p class="text-muted">Waiting for driver to accept...</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

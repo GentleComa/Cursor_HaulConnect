@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - HaulConnect Admin{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">User Management</h1>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <th class="text-muted">User</th>
+                <th class="text-muted">Email</th>
+                <th class="text-muted">Role</th>
+                <th class="text-muted">Status</th>
+                <th class="text-muted">Joined</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="font-weight: 500;">{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td><span style="padding: 2px 8px; background: var(--color-primary-muted); color: var(--color-primary); border-radius: 4px; font-size: 0.8rem;">{{ user.role }}</span></td>
+                <td>
+                    {% if user.is_active %}
+                    <span class="text-success">Active</span>
+                    {% else %}
+                    <span class="text-danger">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ user.created_at.strftime('%m/%d/%Y') }}</td>
+                <td><a href="{{ url_for('admin.user_detail', user_id=user.id) }}" style="color: var(--color-primary);">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

@@ -11,23 +11,32 @@ A modern logistics platform connecting drivers, dispatchers, and brokers. Built 
 
 ## Project Structure
 
-```
+```text
 HaulConnect/
-├── app.py                  # Application entry point
+├── app.py                  # Application entry point and factory
 ├── config.py               # Configuration settings
 ├── extensions.py           # Flask extensions
 ├── requirements.txt        # Python dependencies
-├── app/
-│   ├── __init__.py         # Application factory
-│   ├── models/             # Database models
-│   ├── auth/               # Authentication blueprint
-│   ├── messaging/          # Messaging blueprint
-│   ├── dispatch/           # Dispatch blueprint
-│   ├── main/               # Main routes blueprint
-│   ├── templates/          # Jinja2 templates
-│   └── static/             # Static assets
+├── models/                 # Database models
+│   ├── __init__.py
+│   ├── user.py
+│   ├── load.py
+│   ├── payment.py
+│   └── message.py
+├── routes/                 # Application routes (blueprints)
+│   ├── __init__.py
+│   ├── auth.py
+│   ├── dashboard.py
+│   ├── loads.py
+│   ├── admin.py
+│   ├── api.py
+│   └── simulate.py
+├── templates/              # Jinja2 templates
+├── static/                 # Static assets (CSS, JS, uploads)
+├── utils/                  # Utility functions
 ├── migrations/             # Database migrations
-└── tests/                  # Test suite
+├── tests/                  # Test suite
+└── instance/               # Instance folder (database, etc.)
 ```
 
 ## Quick Start
@@ -40,28 +49,34 @@ HaulConnect/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    cd Cursor_HaulConnect
    ```
 
 2. **Create a virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
+   # IMPORTANT: Never commit .env to version control - it contains secrets!
    ```
 
 5. **Run the application**
+
    ```bash
    python app.py
    ```
@@ -78,15 +93,20 @@ Environment variables (set in `.env`):
 | `FLASK_ENV` | Environment mode | `development` |
 | `SECRET_KEY` | Secret key for sessions | (generated) |
 | `DATABASE_URL` | Database connection string | SQLite |
+| `AUTH_PASSWORD_REQUIRED` | Require passwords for auth | `true` |
+
+**Security Note:** The `.env` file contains sensitive information and is excluded from version control via `.gitignore`. Always use `.env.example` as a template and never commit actual secrets.
 
 ## Development
 
 ### Running Tests
+
 ```bash
 pytest tests/
 ```
 
 ### Database Migrations
+
 ```bash
 # Initialize migrations (first time only)
 flask db init

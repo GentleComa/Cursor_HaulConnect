@@ -5,7 +5,19 @@ Shared fixtures for all tests.
 """
 
 import pytest
-from app import create_app
+import sys
+import os
+
+# Import create_app from app.py module (not app/ package)
+# The app/ directory shadows app.py, so we use importlib
+import importlib.util
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spec = importlib.util.spec_from_file_location("app_module", os.path.join(project_root, "app.py"))
+app_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(app_module)
+create_app = app_module.create_app
+
 from extensions import db
 
 

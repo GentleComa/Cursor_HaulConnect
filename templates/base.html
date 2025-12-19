@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HaulConnect{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        :root {
+            /* Deep industrial palette */
+            --color-bg: #0a0f14;
+            --color-bg-elevated: #121a22;
+            --color-bg-card: #1a242e;
+            --color-border: #2a3a4a;
+            
+            /* Accent - Electric amber */
+            --color-primary: #f59e0b;
+            --color-primary-hover: #fbbf24;
+            --color-primary-muted: rgba(245, 158, 11, 0.15);
+            
+            /* Text */
+            --color-text: #e8edf3;
+            --color-text-muted: #8a9bae;
+            --color-text-subtle: #5a6b7e;
+            
+            /* Status colors */
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-info: #3b82f6;
+            
+            /* Typography */
+            --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            
+            /* Border radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Navigation */
+        .navbar {
+            background: var(--color-bg-elevated);
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--space-md) var(--space-xl);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--color-primary) 0%, #d97706 100%);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: var(--space-lg);
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--color-primary);
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: var(--space-md);
+            align-items: center;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-lg);
+            border-radius: var(--radius-md);
+            font-family: var(--font-sans);
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: var(--color-primary);
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+        
+        .btn-danger {
+            background: var(--color-danger);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--color-success);
+            color: white;
+        }
+        
+        /* Main content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-xl);
+        }
+        
+        /* Flash messages */
+        .flash-messages {
+            position: fixed;
+            top: 80px;
+            right: var(--space-xl);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+        
+        .flash {
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .flash-success { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--color-success); }
+        .flash-error { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--color-danger); }
+        .flash-warning { background: rgba(245, 158, 11, 0.2); border: 1px solid var(--color-warning); }
+        .flash-info { background: rgba(59, 130, 246, 0.2); border: 1px solid var(--color-info); }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+        }
+        
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--color-border);
+            padding: var(--space-xl);
+            text-align: center;
+            color: var(--color-text-subtle);
+            font-size: 0.85rem;
+            margin-top: auto;
+        }
+        
+        /* Utility classes */
+        .text-muted { color: var(--color-text-muted); }
+        .text-primary { color: var(--color-primary); }
+        .text-success { color: var(--color-success); }
+        .text-danger { color: var(--color-danger); }
+        .font-mono { font-family: var(--font-mono); }
+        
+        /* User dropdown */
+        .user-menu {
+            position: relative;
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--color-primary-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="{{ url_for('index') }}" class="logo">
+                <span class="logo-icon">🚛</span>
+                HaulConnect
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="{{ url_for('loads.board') }}">Load Board</a></li>
+                {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('loads.my_loads') }}">My Loads</a></li>
+                {% endif %}
+            </ul>
+            
+            <div class="nav-actions">
+                {% if current_user.is_authenticated %}
+                    <span class="text-muted">{{ current_user.full_name }}</span>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline">Log Out</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Log In</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2024 HaulConnect. Logistics made simple.</p>
+    </footer>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

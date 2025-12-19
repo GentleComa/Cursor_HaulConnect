@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Load Management - HaulConnect Admin{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: var(--space-xl);">Load Management</h1>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <th class="text-muted">Reference</th>
+                <th class="text-muted">Route</th>
+                <th class="text-muted">Status</th>
+                <th class="text-muted">Rate</th>
+                <th class="text-muted">Posted</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for load in loads %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="font-family: var(--font-mono); color: var(--color-primary);">{{ load.reference_number }}</td>
+                <td>{{ load.route_summary }}</td>
+                <td>
+                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
+                        {% if load.status == 'posted' %}background: var(--color-primary-muted); color: var(--color-primary);
+                        {% elif load.status == 'assigned' %}background: rgba(59, 130, 246, 0.2); color: var(--color-info);
+                        {% elif load.status == 'in_transit' %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                        {% elif load.status == 'delivered' %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                        {% endif %}">
+                        {{ load.status|replace('_', ' ')|title }}
+                    </span>
+                </td>
+                <td style="font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</td>
+                <td class="text-muted">{{ load.created_at.strftime('%m/%d/%Y') }}</td>
+                <td><a href="{{ url_for('loads.detail', load_id=load.id) }}" style="color: var(--color-primary);">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
