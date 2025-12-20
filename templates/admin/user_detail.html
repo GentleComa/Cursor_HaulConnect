@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.full_name }} - Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg);">
+    <a href="{{ url_for('admin.users') }}" style="color: var(--color-text-muted);">← Back to Users</a>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <h1>{{ user.full_name }}</h1>
+            <p class="text-muted">{{ user.email }}</p>
+        </div>
+        <div style="display: flex; gap: var(--space-sm);">
+            {% if not user.is_verified %}
+            <form method="POST" action="{{ url_for('admin.verify_user', user_id=user.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-success">Verify User</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn {{ 'btn-danger' if user.is_active else 'btn-primary' }}">
+                    {{ 'Deactivate' if user.is_active else 'Activate' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div
+        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-xl); margin-top: var(--space-xl);">
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Role</div>
+            <div style="font-weight: 500;">{{ user.role|title }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Status</div>
+            <div style="font-weight: 500;">
+                {% if user.is_active %}<span class="text-success">Active</span>{% else %}<span
+                    class="text-danger">Inactive</span>{% endif %}
+                {% if user.is_verified %} • <span class="text-success">Verified</span>{% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Joined</div>
+            <div style="font-weight: 500;">{{ user.created_at.strftime('%B %d, %Y') }}</div>
+        </div>
+        {% if user.phone %}
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Phone</div>
+            <div style="font-weight: 500;">{{ user.phone }}</div>
+        </div>
+        {% endif %}
+        {% if user.company_name %}
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Company</div>
+            <div style="font-weight: 500;">{{ user.company_name }}</div>
+        </div>
+        {% endif %}
+        {% if user.last_login %}
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Last Login</div>
+            <div style="font-weight: 500;">{{ user.last_login.strftime('%B %d, %Y %H:%M') }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

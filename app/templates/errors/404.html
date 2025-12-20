@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: var(--space-2xl) 0;">
+    <div style="font-size: 6rem; margin-bottom: var(--space-lg);">🔍</div>
+    <h1 style="font-size: 2rem; margin-bottom: var(--space-md);">Page Not Found</h1>
+    <p class="text-muted" style="margin-bottom: var(--space-xl);">
+        The page you're looking for doesn't exist or has been moved.
+    </p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">Go Home</a>
+</div>
+{% endblock %}
+

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+    <h1>Messages</h1>
+    <a href="{{ url_for('messaging.compose') }}" class="btn btn-primary">+ New Message</a>
+</div>
+
+<div style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-xl);">
+    <p class="text-muted">📬 Your inbox is empty. Messages with drivers, dispatchers, and brokers will appear here.</p>
+</div>
+{% endblock %}
+

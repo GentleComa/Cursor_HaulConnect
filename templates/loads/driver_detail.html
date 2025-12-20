@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Load {{ load.reference_number }} - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg);">
+    <a href="{{ url_for('loads.driver_board') }}" style="color: var(--color-text-muted);">← Back to Load Board</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-xl);">
+    <!-- Main Info -->
+    <div>
+        <div class="card" style="margin-bottom: var(--space-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-lg);">
+                <div>
+                    <span style="font-family: var(--font-mono); color: var(--color-primary); font-size: 1.2rem;">{{ load.reference_number }}</span>
+                    <span style="margin-left: var(--space-md); padding: 4px 12px; border-radius: 4px; font-size: 0.9rem;
+                        {% if load.status == 'accepted' or load.status == 'assigned' %}background: rgba(59, 130, 246, 0.2); color: var(--color-info);
+                        {% elif load.status == 'near_pickup' %}background: rgba(139, 92, 246, 0.2); color: var(--color-primary);
+                        {% elif load.status == 'ready' %}background: rgba(34, 197, 94, 0.2); color: var(--color-success);
+                        {% elif load.status == 'in_transit' %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                        {% elif load.status == 'delivered' %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                        {% endif %}">
+                        {{ load.status|replace('_', ' ')|title }}
+                    </span>
+                </div>
+            </div>
+            
+            <h2 style="font-size: 1.5rem; margin-bottom: var(--space-xl);">
+                {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state }}
+            </h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl);">
+                <div>
+                    <h3 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">PICKUP</h3>
+                    <div style="font-weight: 500;">{{ load.origin_city }}, {{ load.origin_state }} {{ load.origin_zip or '' }}</div>
+                    {% if load.origin_address %}<div class="text-muted">{{ load.origin_address }}</div>{% endif %}
+                    <div style="margin-top: var(--space-sm); color: var(--color-primary);">{{ load.pickup_date.strftime('%B %d, %Y') if load.pickup_date else 'TBD' }}</div>
+                </div>
+                <div>
+                    <h3 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">DELIVERY</h3>
+                    <div style="font-weight: 500;">{{ load.destination_city }}, {{ load.destination_state }} {{ load.destination_zip or '' }}</div>
+                    {% if load.destination_address %}<div class="text-muted">{{ load.destination_address }}</div>{% endif %}
+                    {% if load.delivery_date %}<div style="margin-top: var(--space-sm); color: var(--color-primary);">{{ load.delivery_date.strftime('%B %d, %Y') }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: var(--space-lg);">Load Details</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg);">
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Equipment Type</div>
+                    <div style="font-weight: 500;">{{ load.equipment_type|replace('_', ' ')|title }}</div>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Weight</div>
+                    <div style="font-weight: 500;">{{ load.weight|int if load.weight else 'N/A' }} lbs</div>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Distance</div>
+                    <div style="font-weight: 500;">{{ load.distance or 'N/A' }} miles</div>
+                </div>
+                {% if load.commodity %}
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Commodity</div>
+                    <div style="font-weight: 500;">{{ load.commodity }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if load.special_instructions %}
+            <div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+                <h4 style="margin-bottom: var(--space-sm);">Special Instructions</h4>
+                <p class="text-muted">{{ load.special_instructions }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div>
+        <div class="card" style="margin-bottom: var(--space-lg);">
+            <div style="text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-success); font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</div>
+                {% if load.rate_per_mile %}<div class="text-muted">${{ "%.2f"|format(load.rate_per_mile) }} per mile</div>{% endif %}
+            </div>
+            
+            <div style="margin-top: var(--space-lg);">
+                {% if load.status == 'accepted' or load.status == 'assigned' %}
+                <form method="POST" action="{{ url_for('loads.update_status', load_id=load.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="in_transit">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Mark In Transit</button>
+                </form>
+                {% elif load.status == 'in_transit' %}
+                <form method="POST" action="{{ url_for('loads.update_status', load_id=load.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="delivered">
+                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center;">Mark Delivered</button>
+                </form>
+                {% elif load.status == 'delivered' %}
+                <div class="text-success" style="text-align: center; padding: var(--space-md);">
+                    ✓ Load Delivered
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h4 style="margin-bottom: var(--space-md);">Shipper</h4>
+            <div style="font-weight: 500;">{{ load.shipper.company_name or load.shipper.full_name }}</div>
+            <div class="text-muted" style="font-size: 0.9rem;">{{ load.shipper.email }}</div>
+            {% if load.shipper.phone %}<div class="text-muted" style="font-size: 0.9rem;">{{ load.shipper.phone }}</div>{% endif %}
+            {% if load.shipper.is_verified %}
+            <span style="color: var(--color-success); font-size: 0.9rem;">✓ Verified</span>
+            {% endif %}
+        </div>
+        
+        {% if load.progress is defined and load.progress > 0 %}
+        <div class="card" style="margin-top: var(--space-lg);">
+            <h4 style="margin-bottom: var(--space-md);">Progress</h4>
+            <div style="background: var(--color-bg-elevated); border-radius: var(--radius-md); height: 8px; overflow: hidden;">
+                <div style="background: var(--color-primary); height: 100%; width: {{ (load.progress * 100)|int }}%; transition: width 0.3s;"></div>
+            </div>
+            <div class="text-muted" style="font-size: 0.9rem; margin-top: var(--space-sm);">{{ (load.progress * 100)|int }}% Complete</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if load.status in ['near_pickup', 'ready', 'in_transit'] %}
+<!-- Messaging Section -->
+<div class="card" style="margin-top: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-lg);">Messages</h3>
+    
+    <div id="messages-container" style="max-height: 400px; overflow-y: auto; margin-bottom: var(--space-lg); padding: var(--space-md); background: var(--color-bg-elevated); border-radius: var(--radius-md);">
+        <div id="messages-list"></div>
+    </div>
+    
+    <form id="message-form">
+        <div style="margin-bottom: var(--space-md);">
+            <textarea id="message-content" placeholder="Type your message..." rows="3" 
+                      style="width: 100%; padding: var(--space-sm) var(--space-md); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); resize: vertical;"></textarea>
+        </div>
+        <div style="margin-bottom: var(--space-md);">
+            <input type="file" id="photo-input" accept="image/*" style="display: none;">
+            <button type="button" id="photo-button" class="btn btn-outline" style="margin-right: var(--space-sm);">
+                📷 Add Photo
+            </button>
+            <span id="photo-preview" style="font-size: 0.9rem; color: var(--color-text-muted);"></span>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send Message</button>
+    </form>
+</div>
+
+<script>
+const loadId = {{ load.id }};
+const currentUserId = {{ current_user.id }};
+let pollInterval;
+
+// Load messages
+async function loadMessages() {
+    try {
+        const response = await fetch(`/api/messages/${loadId}`);
+        if (response.ok) {
+            const messages = await response.json();
+            displayMessages(messages);
+        }
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Display messages
+function displayMessages(messages) {
+    const container = document.getElementById('messages-list');
+    container.innerHTML = '';
+    
+    messages.forEach(msg => {
+        const isOwn = msg.sender_id === currentUserId;
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: ${isOwn ? 'flex-end' : 'flex-start'};
+        `;
+        
+        const isSystem = msg.is_system || msg.sender_id === null;
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `
+            max-width: 70%;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-md);
+            background: ${isSystem ? 'var(--color-bg-elevated)' : (isOwn ? 'var(--color-primary)' : 'var(--color-bg-elevated)')};
+            color: ${isOwn && !isSystem ? 'white' : 'var(--color-text)'};
+            ${isSystem ? 'border: 1px solid var(--color-border); font-style: italic;' : ''}
+        `;
+        
+        if (!isOwn && !isSystem) {
+            const senderName = document.createElement('div');
+            senderName.style.cssText = 'font-size: 0.85rem; font-weight: 500; margin-bottom: var(--space-xs);';
+            senderName.textContent = msg.sender_name;
+            bubble.appendChild(senderName);
+        } else if (isSystem) {
+            const systemLabel = document.createElement('div');
+            systemLabel.style.cssText = 'font-size: 0.75rem; font-weight: 500; margin-bottom: var(--space-xs); color: var(--color-text-muted);';
+            systemLabel.textContent = 'System';
+            bubble.appendChild(systemLabel);
+        }
+        
+        if (msg.content) {
+            const content = document.createElement('div');
+            content.textContent = msg.content;
+            bubble.appendChild(content);
+        }
+        
+        if (msg.photo_url) {
+            const img = document.createElement('img');
+            img.src = msg.photo_url;
+            img.style.cssText = 'max-width: 100%; border-radius: var(--radius-sm); margin-top: var(--space-xs);';
+            img.alt = 'Photo attachment';
+            bubble.appendChild(img);
+        }
+        
+        const timestamp = document.createElement('div');
+        timestamp.style.cssText = 'font-size: 0.75rem; opacity: 0.7; margin-top: var(--space-xs);';
+        const date = new Date(msg.timestamp);
+        timestamp.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        bubble.appendChild(timestamp);
+        
+        messageDiv.appendChild(bubble);
+        container.appendChild(messageDiv);
+    });
+    
+    // Scroll to bottom
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Send message
+document.getElementById('message-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const content = document.getElementById('message-content').value.trim();
+    const photoInput = document.getElementById('photo-input');
+    let photoB64 = null;
+    
+    if (photoInput.files.length > 0) {
+        const file = photoInput.files[0];
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            photoB64 = event.target.result.split(',')[1]; // Remove data:image/...;base64, prefix
+            await sendMessage(content, photoB64);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        await sendMessage(content, null);
+    }
+});
+
+async function sendMessage(content, photoB64) {
+    if (!content && !photoB64) {
+        alert('Please enter a message or attach a photo');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/messages/${loadId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: content || null,
+                photo: photoB64
+            })
+        });
+        
+        if (response.ok) {
+            document.getElementById('message-content').value = '';
+            document.getElementById('photo-input').value = '';
+            document.getElementById('photo-preview').textContent = '';
+            loadMessages();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || 'Failed to send message'));
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message');
+    }
+}
+
+// Photo input handler
+document.getElementById('photo-button').addEventListener('click', () => {
+    document.getElementById('photo-input').click();
+});
+
+document.getElementById('photo-input').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        document.getElementById('photo-preview').textContent = `📷 ${e.target.files[0].name}`;
+    }
+});
+
+// Start polling
+loadMessages();
+pollInterval = setInterval(loadMessages, 10000); // Poll every 10 seconds
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+});
+</script>
+{% endif %}
+{% endblock %}
+

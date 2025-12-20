@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Dev Dashboard - Simulation Mode{% endblock %}
+
+{% block content %}
+<div
+    style="background: rgba(245, 158, 11, 0.1); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-xl);">
+    <div style="display: flex; align-items: center; gap: var(--space-md);">
+        <div style="font-size: 2rem;">⚠️</div>
+        <div>
+            <h2 style="margin: 0; color: var(--color-warning);">Development Simulation Mode</h2>
+            <p style="margin: var(--space-xs) 0 0 0; color: var(--color-text-muted);">
+                This page is only available in DEBUG mode for testing purposes.
+                Use this interface to manually simulate load dispatch status transitions.
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if current_user.has_admin_access() %}
+<!-- Bulk Simulation (Admin Only) -->
+<div class="card" style="margin-bottom: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-md);">Bulk Shipment Simulation</h3>
+    <p class="text-muted" style="margin-bottom: var(--space-md);">
+        Create multiple test shipments with full lifecycle simulation including messaging, idle alerts, and status
+        progression.
+    </p>
+    <form id="bulk-sim-form" style="display: flex; gap: var(--space-md); align-items: end;">
+        <div style="flex: 1;">
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Number of Shipments</label>
+            <input type="number" id="shipment-count" min="1" max="50" value="5"
+                style="width: 100%; padding: var(--space-sm) var(--space-md); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+        </div>
+        <button type="submit" class="btn btn-primary">Create Shipments</button>
+    </form>
+    <div id="bulk-sim-result" style="margin-top: var(--space-md);"></div>
+    <div style="margin-top: var(--space-md); display: flex; gap: var(--space-md);">
+        <a href="{{ url_for('simulate.map_view') }}" class="btn btn-outline">View Map</a>
+        <a href="{{ url_for('simulate.view_simulation_report') }}" class="btn btn-outline">View Latest Report</a>
+    </div>
+</div>
+{% endif %}
+
+<h1 style="margin-bottom: var(--space-xl);">My Assigned Loads</h1>
+
+{% if loads %}
+<div style="display: grid; gap: var(--space-lg);">
+    {% for load in loads %}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-md);">
+            <div>
+                <h3 style="margin: 0 0 var(--space-xs) 0;">
+                    <a href="{{ url_for('loads.detail', load_id=load.id) }}"
+                        style="color: var(--color-primary); text-decoration: none;">
+                        {{ load.reference_number }}
+                    </a>
+                </h3>
+                <p style="margin: 0; color: var(--color-text-muted);">{{ load.route_summary }}</p>
+            </div>
+            <div style="text-align: right;">
+                <div
+                    style="font-size: 1.5rem; font-weight: 700; color: var(--color-primary); font-family: var(--font-mono);">
+                    ${{ "%.2f"|format(load.rate) }}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--color-text-muted);">{{ load.distance }} miles</div>
+            </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div style="margin-bottom: var(--space-md);">
+            {% set status_colors = {
+            'posted': ('gray', 'rgba(107, 114, 128, 0.2)'),
+            'accepted': ('#f59e0b', 'rgba(245, 158, 11, 0.2)'),
+            'assigned': ('#f59e0b', 'rgba(245, 158, 11, 0.2)'),
+            'near_pickup': ('#3b82f6', 'rgba(59, 130, 246, 0.2)'),
+            'ready': ('#14b8a6', 'rgba(20, 184, 166, 0.2)'),
+            'in_transit': ('#10b981', 'rgba(16, 185, 129, 0.2)'),
+            'delivered': ('#059669', 'rgba(5, 150, 105, 0.2)')
+            } %}
+            {% set color_info = status_colors.get(load.status, ('gray', 'rgba(107, 114, 128, 0.2)')) %}
+            <span style="padding: 4px 12px; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 500; 
+                background: {{ color_info[1] }}; color: {{ color_info[0] }};">
+                {{ load.status|replace('_', ' ')|title }}
+            </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="margin-bottom: var(--space-md);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs);">
+                <span style="font-size: 0.85rem; color: var(--color-text-muted);">Progress</span>
+                <span style="font-size: 0.85rem; color: var(--color-text-muted);">{{ (load.progress * 100)|int
+                    }}%</span>
+            </div>
+            <div
+                style="width: 100%; height: 8px; background: var(--color-bg-elevated); border-radius: var(--radius-md); overflow: hidden;">
+                <div
+                    style="width: {{ (load.progress * 100)|int }}%; height: 100%; background: var(--color-primary); transition: width 0.3s ease;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Flow Indicator -->
+        <div style="margin-bottom: var(--space-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+                {% set stages = ['accepted', 'near_pickup', 'ready', 'in_transit', 'delivered'] %}
+                {% set current_status = load.status %}
+                {% set status_index = stages.index(current_status) if current_status in stages else
+                (stages.index('accepted') if current_status == 'assigned' else -1) %}
+                {% for stage in stages %}
+                {% set stage_index = loop.index0 %}
+                {% set is_completed = status_index > stage_index or (status_index == stage_index and current_status ==
+                stage) %}
+                <div style="flex: 1; text-align: center; position: relative;">
+                    {% if loop.index < loop.length %} <div style="position: absolute; top: 8px; left: 50%; width: 100%; height: 2px; 
+                        background: {% if is_completed %}var(--color-primary){% else %}var(--color-border){% endif %}; 
+                        z-index: 0;">
+                </div>
+                {% endif %}
+                <div style="position: relative; z-index: 1; width: 16px; height: 16px; margin: 0 auto; 
+                        border-radius: 50%; 
+                        background: {% if is_completed %}var(--color-primary){% else %}var(--color-border){% endif %}; 
+                        border: 2px solid var(--color-bg);"></div>
+                <div style="margin-top: var(--space-xs); color: var(--color-text-muted);">
+                    {{ stage|replace('_', ' ')|title|truncate(8, True, '') }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Advance Button -->
+    {% if load.status != 'delivered' %}
+    <form method="POST" action="{{ url_for('simulate.advance_status', load_id=load.id) }}" style="margin: 0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Advance Status →
+        </button>
+    </form>
+    {% else %}
+    <div
+        style="padding: var(--space-md); background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-md); text-align: center;">
+        <span style="color: var(--color-success); font-weight: 500;">✓ Load Delivered</span>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <p class="text-muted" style="text-align: center; padding: var(--space-xl);">
+        No assigned loads found. Accept a load from the <a href="{{ url_for('loads.driver_board') }}">load board</a> to
+        begin simulation.
+    </p>
+</div>
+{% endif %}
+
+{% if current_user.has_admin_access() %}
+<script>
+    // Bulk simulation form
+    document.getElementById('bulk-sim-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const count = parseInt(document.getElementById('shipment-count').value);
+        const resultDiv = document.getElementById('bulk-sim-result');
+
+        if (count < 1 || count > 50) {
+            resultDiv.innerHTML = '<div class="text-danger">Count must be between 1 and 50</div>';
+            return;
+        }
+
+        resultDiv.innerHTML = '<div class="text-muted">Creating shipments...</div>';
+
+        try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            const response = await fetch(`/simulate/create-bulk/${count}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (!response.ok) {
+                // Try to parse as JSON, but if it fails, show the response text
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                } catch (e) {
+                    const text = await response.text();
+                    errorMessage = text.substring(0, 200) || errorMessage;
+                }
+                resultDiv.innerHTML = `<div class="text-danger">Error: ${errorMessage}</div>`;
+                return;
+            }
+
+            const data = await response.json();
+
+            if (response.ok) {
+                resultDiv.innerHTML = `
+                <div class="text-success">
+                    <strong>Success!</strong> ${data.message}<br>
+                    <small>Created ${data.shipments.length} shipments. <a href="{{ url_for('simulate.map_view') }}">View on map</a></small>
+                </div>
+            `;
+                // Reload page after 2 seconds to show new loads
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                resultDiv.innerHTML = `<div class="text-danger">Error: ${data.message}</div>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="text-danger">Error: ${error.message}</div>`;
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

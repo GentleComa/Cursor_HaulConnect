@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Simulation Report - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg); display: flex; justify-content: space-between; align-items: center;">
+    <h1>Simulation Report</h1>
+    <div style="display: flex; gap: var(--space-md);">
+        <a href="{{ url_for('simulate.dev_dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+        <a href="{{ url_for('simulate.download_simulation_report', run_id=report.run_id) }}"
+            class="btn btn-primary">Download JSON</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-lg);">Summary</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-lg);">
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Run ID</div>
+            <div style="font-weight: 500; font-family: var(--font-mono);">{{ report.run_id }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Total Shipments</div>
+            <div style="font-size: 1.5rem; font-weight: 700;">{{ report.summary.total_shipments }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Successful</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-success);">{{ report.summary.successful
+                }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Failed</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-danger);">{{ report.summary.failed }}
+            </div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Success Rate</div>
+            <div style="font-size: 1.5rem; font-weight: 700;">{{ "%.1f"|format(report.summary.success_rate) }}%</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Avg Health Score</div>
+            <div style="font-size: 1.5rem; font-weight: 700;">{{ report.summary.avg_health_score }}/100</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Idle 15 Events</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-warning);">{{
+                report.summary.idle_15_count }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Idle 30 Events</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-danger);">{{
+                report.summary.idle_30_count }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Total Messages</div>
+            <div style="font-size: 1.5rem; font-weight: 700;">{{ report.summary.total_messages }}</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.9rem;">Total Errors</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-danger);">{{ report.summary.total_errors
+                }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: var(--space-lg);">Shipment Details</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Shipment ID</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Route</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Driver</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Idle Event</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Messages</th>
+                <th style="text-align: left; padding: var(--space-sm); color: var(--color-text-muted);">Errors</th>
+                <th style="text-align: right; padding: var(--space-sm); color: var(--color-text-muted);">Elapsed</th>
+                <th style="text-align: center; padding: var(--space-sm); color: var(--color-text-muted);">Status</th>
+                <th style="text-align: center; padding: var(--space-sm); color: var(--color-text-muted);">Health</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shipment in report.shipments_with_validation %}
+            <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="padding: var(--space-sm); font-family: var(--font-mono);">{{ shipment.shipment_id }}</td>
+                <td style="padding: var(--space-sm);">
+                    {{ shipment.origin_zip }} → {{ shipment.destination_zip }}
+                </td>
+                <td style="padding: var(--space-sm);">Driver {{ shipment.driver_id }}</td>
+                <td style="padding: var(--space-sm);">
+                    {% if shipment.idle_events %}
+                    {% for event in shipment.idle_events %}
+                    <span
+                        style="padding: 2px 6px; background: rgba(139, 92, 246, 0.2); color: var(--color-primary); border-radius: 4px; font-size: 0.8rem; margin-right: var(--space-xs);">
+                        {{ event }}
+                    </span>
+                    {% endfor %}
+                    {% else %}
+                    <span class="text-muted">None</span>
+                    {% endif %}
+                </td>
+                <td style="padding: var(--space-sm);">
+                    <div style="font-size: 0.85rem;">
+                        Total: {{ shipment.message_summary.total }}<br>
+                        <span class="text-muted">D:{{ shipment.message_summary.driver }} S:{{
+                            shipment.message_summary.shipper }} A:{{ shipment.message_summary.admin }}</span>
+                    </div>
+                </td>
+                <td style="padding: var(--space-sm);">
+                    {% if shipment.errors %}
+                    <span style="color: var(--color-danger);">{{ shipment.errors|length }}</span>
+                    {% else %}
+                    <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td style="padding: var(--space-sm); text-align: right; font-size: 0.85rem;">
+                    {{ "%.1f"|format(shipment.elapsed_seconds) }}s
+                </td>
+                <td style="padding: var(--space-sm); text-align: center;">
+                    {% if shipment.success %}
+                    <span style="color: var(--color-success);">✅</span>
+                    {% else %}
+                    <span style="color: var(--color-danger);">❌</span>
+                    {% endif %}
+                </td>
+                <td style="padding: var(--space-sm); text-align: center;">
+                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;
+                        {% if shipment.validation.health_score >= 80 %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                        {% elif shipment.validation.health_score >= 60 %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                        {% else %}background: rgba(239, 68, 68, 0.2); color: var(--color-danger);
+                        {% endif %}">
+                        {{ shipment.validation.health_score }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if report.summary.total_errors > 0 %}
+<div class="card" style="margin-top: var(--space-xl);">
+    <h3 style="margin-bottom: var(--space-lg); color: var(--color-danger);">Errors & Issues</h3>
+    {% for shipment in report.shipments_with_validation %}
+    {% if shipment.errors %}
+    <div
+        style="margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+        <h4 style="margin-bottom: var(--space-sm);">Shipment {{ shipment.shipment_id }}</h4>
+        {% for error in shipment.errors %}
+        <div
+            style="padding: var(--space-sm); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-sm); margin-bottom: var(--space-xs);">
+            <div style="font-size: 0.85rem; color: var(--color-text-muted);">{{ error.timestamp }}</div>
+            <div style="font-weight: 500; color: var(--color-danger);">{{ error.type }}</div>
+            <div>{{ error.message }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

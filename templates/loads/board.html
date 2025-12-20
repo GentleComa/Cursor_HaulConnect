@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Load Board - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl);">
+    <h1>Load Board</h1>
+    {% if current_user.is_authenticated and current_user.is_shipper() %}
+    <a href="{{ url_for('loads.post') }}" class="btn btn-primary">+ Post Load</a>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: var(--space-lg);">
+    <form method="GET" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: end;">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-size: 0.9rem; color: var(--color-text-muted);">Origin State</label>
+            <input type="text" name="origin_state" value="{{ request.args.get('origin_state', '') }}" placeholder="e.g., CA" 
+                   style="padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-size: 0.9rem; color: var(--color-text-muted);">Destination State</label>
+            <input type="text" name="dest_state" value="{{ request.args.get('dest_state', '') }}" placeholder="e.g., TX"
+                   style="padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-size: 0.9rem; color: var(--color-text-muted);">Equipment</label>
+            <select name="equipment" style="padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+                <option value="">All Types</option>
+                <option value="dry_van" {{ 'selected' if request.args.get('equipment') == 'dry_van' }}>Dry Van</option>
+                <option value="flatbed" {{ 'selected' if request.args.get('equipment') == 'flatbed' }}>Flatbed</option>
+                <option value="reefer" {{ 'selected' if request.args.get('equipment') == 'reefer' }}>Reefer</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-outline">Filter</button>
+        <a href="{{ url_for('loads.board') }}" class="btn btn-outline">Clear</a>
+    </form>
+</div>
+
+<!-- Load List -->
+{% if loads %}
+<div style="display: grid; gap: var(--space-md);">
+    {% for load in loads %}
+    <div class="card" style="display: grid; grid-template-columns: 1fr auto; gap: var(--space-lg); align-items: center;">
+        <div>
+            <div style="display: flex; gap: var(--space-md); align-items: center; margin-bottom: var(--space-sm);">
+                <span style="font-family: var(--font-mono); color: var(--color-primary);">{{ load.reference_number }}</span>
+                <span style="padding: 2px 8px; background: var(--color-primary-muted); color: var(--color-primary); border-radius: 4px; font-size: 0.8rem;">{{ load.equipment_type|replace('_', ' ')|title }}</span>
+            </div>
+            <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: var(--space-sm);">
+                {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state }}
+            </div>
+            <div style="display: flex; gap: var(--space-lg); color: var(--color-text-muted); font-size: 0.9rem;">
+                {% if load.weight %}<span>{{ load.weight|int }} lbs</span>{% endif %}
+                {% if load.distance %}<span>{{ load.distance }} mi</span>{% endif %}
+                <span>Pickup: {{ load.pickup_date.strftime('%m/%d/%Y') if load.pickup_date else 'TBD' }}</span>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-success); font-family: var(--font-mono);">${{ "%.2f"|format(load.rate) }}</div>
+            {% if load.rate_per_mile %}<div style="color: var(--color-text-muted); font-size: 0.9rem;">${{ "%.2f"|format(load.rate_per_mile) }}/mi</div>{% endif %}
+            <a href="{{ url_for('loads.detail', load_id=load.id) }}" class="btn btn-primary" style="margin-top: var(--space-sm);">View Details</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <p class="text-muted">📦 No loads match your criteria. Try adjusting your filters or check back later.</p>
+</div>
+{% endif %}
+{% endblock %}
+

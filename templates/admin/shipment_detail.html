@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Shipment {{ load.reference_number }} - Admin - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-lg);">
+    <a href="{{ url_for('admin.shipments') }}" style="color: var(--color-text-muted);">← Back to Shipments</a>
+</div>
+
+<!-- Header Section -->
+<div class="card" style="margin-bottom: var(--space-xl);">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-lg);">
+        <div>
+            <h1 style="margin: 0 0 var(--space-sm) 0;">
+                <span style="font-family: var(--font-mono); color: var(--color-primary); font-size: 1.5rem;">{{
+                    load.reference_number }}</span>
+                <span style="margin-left: var(--space-md); padding: 6px 16px; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 500;
+                    {% if load.status == 'posted' %}background: var(--color-primary-muted); color: var(--color-primary);
+                    {% elif load.status == 'assigned' or load.status == 'accepted' %}background: rgba(59, 130, 246, 0.2); color: var(--color-info);
+                    {% elif load.status == 'near_pickup' %}background: rgba(139, 92, 246, 0.2); color: var(--color-primary);
+                    {% elif load.status == 'ready' %}background: rgba(34, 197, 94, 0.2); color: var(--color-success);
+                    {% elif load.status == 'in_transit' %}background: rgba(245, 158, 11, 0.2); color: var(--color-warning);
+                    {% elif load.status == 'delivered' %}background: rgba(16, 185, 129, 0.2); color: var(--color-success);
+                    {% elif load.status == 'cancelled' %}background: rgba(239, 68, 68, 0.2); color: var(--color-danger);
+                    {% endif %}">
+                    {{ load.status|replace('_', ' ')|title }}
+                </span>
+            </h1>
+            <div style="font-size: 1.1rem; color: var(--color-text-muted);">
+                {{ load.origin_city }}, {{ load.origin_state }} → {{ load.destination_city }}, {{ load.destination_state
+                }}
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--color-success); font-family: var(--font-mono);">
+                ${{ "%.2f"|format(load.rate) }}</div>
+            {% if load.rate_per_mile %}<div class="text-muted">${{ "%.2f"|format(load.rate_per_mile) }} per mile</div>{%
+            endif %}
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+        <div>
+            <div class="text-muted" style="font-size: 0.85rem;">Distance</div>
+            <div style="font-weight: 600; font-size: 1.1rem;">{{ load.distance or 'N/A' }} miles</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.85rem;">Weight</div>
+            <div style="font-weight: 600; font-size: 1.1rem;">{{ load.weight|int if load.weight else 'N/A' }} lbs</div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.85rem;">Progress</div>
+            <div style="font-weight: 600; font-size: 1.1rem;">{{ (load.progress * 100)|int if load.progress else 0 }}%
+            </div>
+        </div>
+        <div>
+            <div class="text-muted" style="font-size: 0.85rem;">Created</div>
+            <div style="font-weight: 600; font-size: 1.1rem;">{{ load.created_at.strftime('%m/%d/%Y') if load.created_at
+                else 'N/A' }}</div>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); margin-bottom: var(--space-xl);">
+    <!-- Left Column: Map and Details -->
+    <div>
+        <!-- Map Section -->
+        <div class="card" style="margin-bottom: var(--space-xl);">
+            <h3 style="margin-bottom: var(--space-md);">Route Map</h3>
+            <div id="route-map" style="height: 400px; width: 100%; border-radius: var(--radius-md); overflow: hidden;">
+            </div>
+        </div>
+
+        <!-- Shipment Details -->
+        <div class="card">
+            <h3 style="margin-bottom: var(--space-lg);">Shipment Details</h3>
+
+            <div style="display: grid; gap: var(--space-lg);">
+                <div>
+                    <h4 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">
+                        PICKUP</h4>
+                    <div style="font-weight: 500;">{{ load.origin_city }}, {{ load.origin_state }} {{ load.origin_zip or
+                        '' }}</div>
+                    {% if load.origin_address %}<div class="text-muted" style="margin-top: var(--space-xs);">{{
+                        load.origin_address }}</div>{% endif %}
+                    <div style="margin-top: var(--space-sm); color: var(--color-primary);">
+                        {{ load.pickup_date.strftime('%B %d, %Y at %I:%M %p') if load.pickup_date else 'TBD' }}
+                    </div>
+                </div>
+
+                <div style="padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+                    <h4 style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">
+                        DELIVERY</h4>
+                    <div style="font-weight: 500;">{{ load.destination_city }}, {{ load.destination_state }} {{
+                        load.destination_zip or '' }}</div>
+                    {% if load.destination_address %}<div class="text-muted" style="margin-top: var(--space-xs);">{{
+                        load.destination_address }}</div>{% endif %}
+                    {% if load.delivery_date %}
+                    <div style="margin-top: var(--space-sm); color: var(--color-success);">
+                        {{ load.delivery_date.strftime('%B %d, %Y at %I:%M %p') }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div style="padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+                        <div>
+                            <div class="text-muted" style="font-size: 0.85rem;">Equipment Type</div>
+                            <div style="font-weight: 500;">{{ load.equipment_type|replace('_', ' ')|title }}</div>
+                        </div>
+                        {% if load.commodity %}
+                        <div>
+                            <div class="text-muted" style="font-size: 0.85rem;">Commodity</div>
+                            <div style="font-weight: 500;">{{ load.commodity }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if load.special_instructions %}
+                <div style="padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+                    <h4 style="margin-bottom: var(--space-sm);">Special Instructions</h4>
+                    <p class="text-muted">{{ load.special_instructions }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Participants -->
+        <div class="card" style="margin-top: var(--space-xl);">
+            <h3 style="margin-bottom: var(--space-lg);">Participants</h3>
+            <div style="display: grid; gap: var(--space-md);">
+                <div>
+                    <div class="text-muted" style="font-size: 0.85rem;">Shipper</div>
+                    <div style="font-weight: 500;">{{ load.shipper.full_name if load.shipper else 'N/A' }}</div>
+                    {% if load.shipper %}<div class="text-muted" style="font-size: 0.85rem;">{{ load.shipper.email }}
+                    </div>{% endif %}
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 0.85rem;">Driver</div>
+                    <div style="font-weight: 500;">{{ load.driver.full_name if load.driver else 'Unassigned' }}</div>
+                    {% if load.driver %}<div class="text-muted" style="font-size: 0.85rem;">{{ load.driver.email }}
+                    </div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Messages and Notes -->
+    <div>
+        <!-- Message History -->
+        <div class="card" style="margin-bottom: var(--space-xl);">
+            <h3 style="margin-bottom: var(--space-lg);">Message History</h3>
+            <div id="messages-container"
+                style="max-height: 500px; overflow-y: auto; padding: var(--space-md); background: var(--color-bg-elevated); border-radius: var(--radius-md);">
+                {% if messages %}
+                {% for message in messages %}
+                <div
+                    style="margin-bottom: var(--space-md); display: flex; justify-content: {% if message.sender_id == current_user.id %}flex-end{% else %}flex-start{% endif %};">
+                    <div style="max-width: 75%;">
+                        <div
+                            style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                            {% if message.sender_id and message.sender %}
+                            {{ message.sender.full_name }}
+                            {% elif message.sender_id %}
+                            Unknown User
+                            {% else %}
+                            System
+                            {% endif %}
+                            <span style="margin-left: var(--space-xs);">{{ message.timestamp.strftime('%m/%d/%Y %I:%M
+                                %p') if message.timestamp else (message.created_at.strftime('%m/%d/%Y %I:%M %p') if
+                                message.created_at else '') }}</span>
+                        </div>
+                        <div style="padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); 
+                                {% if message.sender_id == current_user.id %}background: var(--color-primary); color: white;
+                                {% elif not message.sender_id %}background: var(--color-bg-elevated); border: 1px solid var(--color-border); font-style: italic;
+                                {% else %}background: var(--color-bg-elevated);{% endif %}">
+                            {% if message.content %}{{ message.content }}{% endif %}
+                            {% if message.photo_url %}
+                            <div style="margin-top: var(--space-sm);">
+                                <img src="{{ message.photo_url }}" alt="Message photo"
+                                    style="max-width: 100%; border-radius: var(--radius-sm);">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted" style="text-align: center; padding: var(--space-lg);">No messages yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Admin Notes -->
+        <div class="card">
+            <h3 style="margin-bottom: var(--space-lg);">Admin Notes</h3>
+
+            <!-- Add Note Form -->
+            <form method="POST" action="{{ url_for('admin.add_shipment_note', load_id=load.id) }}"
+                style="margin-bottom: var(--space-xl);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="margin-bottom: var(--space-md);">
+                    <textarea name="content" placeholder="Add a note about this shipment..." rows="4" required
+                        style="width: 100%; padding: var(--space-sm) var(--space-md); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Add
+                    Note</button>
+            </form>
+
+            <!-- Notes List -->
+            <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-lg);">
+                {% if notes %}
+                {% for note in notes %}
+                <div
+                    style="padding: var(--space-md); background: var(--color-bg-elevated); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-sm);">
+                        <div>
+                            <div style="font-weight: 500; font-size: 0.9rem;">{{ note.admin.full_name if note.admin else
+                                'Unknown Admin' }}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">{{ note.created_at.strftime('%m/%d/%Y
+                                %I:%M %p') if note.created_at else '' }}</div>
+                        </div>
+                        {% if note.admin_id == current_user.id %}
+                        <form method="POST"
+                            action="{{ url_for('admin.delete_shipment_note', load_id=load.id, note_id=note.id) }}"
+                            style="display: inline;" onsubmit="return confirm('Delete this note?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit"
+                                style="background: none; border: none; color: var(--color-danger); cursor: pointer; font-size: 0.85rem;">Delete</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div style="color: var(--color-text); white-space: pre-wrap;">{{ note.content }}</div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted" style="text-align: center; padding: var(--space-lg);">No notes yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet.js for Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Initialize map
+    {% if load.origin_lat and load.origin_lng and load.dest_lat and load.dest_lng %}
+    const pickupLat = {{ load.origin_lat }};
+    const pickupLng = {{ load.origin_lng }};
+    const dropoffLat = {{ load.dest_lat }};
+    const dropoffLng = {{ load.dest_lng }};
+
+    // Calculate center point
+    const centerLat = (pickupLat + dropoffLat) / 2;
+    const centerLng = (pickupLng + dropoffLng) / 2;
+
+    // Calculate zoom level based on distance
+    const latDiff = Math.abs(pickupLat - dropoffLat);
+    const lngDiff = Math.abs(pickupLng - dropoffLng);
+    const maxDiff = Math.max(latDiff, lngDiff);
+    let zoom = 6;
+    if (maxDiff < 0.1) zoom = 10;
+    else if (maxDiff < 0.5) zoom = 8;
+    else if (maxDiff < 1.0) zoom = 7;
+    else zoom = 6;
+
+    const map = L.map('route-map').setView([centerLat, centerLng], zoom);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add pickup marker (blue)
+    const pickupMarker = L.marker([pickupLat, pickupLng], {
+        icon: L.divIcon({
+            className: 'pickup-marker',
+            html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20]
+        })
+    }).addTo(map);
+
+    pickupMarker.bindPopup(`
+        <strong>Pickup Location</strong><br>
+        {{ load.origin_city }}, {{ load.origin_state }}<br>
+        {% if load.origin_address %}{{ load.origin_address }}<br>{% endif %}
+        {% if load.origin_zip %}{{ load.origin_zip }}{% endif %}
+    `);
+
+    // Add dropoff marker (red)
+    const dropoffMarker = L.marker([dropoffLat, dropoffLng], {
+        icon: L.divIcon({
+            className: 'dropoff-marker',
+            html: '<div style="background: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20]
+        })
+    }).addTo(map);
+
+    dropoffMarker.bindPopup(`
+        <strong>Dropoff Location</strong><br>
+        {{ load.destination_city }}, {{ load.destination_state }}<br>
+        {% if load.destination_address %}{{ load.destination_address }}<br>{% endif %}
+        {% if load.destination_zip %}{{ load.destination_zip }}{% endif %}
+    `);
+
+    // Draw route line
+    const routeLine = L.polyline(
+        [[pickupLat, pickupLng], [dropoffLat, dropoffLng]],
+        { color: '#f59e0b', weight: 3, opacity: 0.6, dashArray: '10, 5' }
+    ).addTo(map);
+
+    // Add current driver location if available and in transit
+    {% if load.current_lat and load.current_lng and load.status == 'in_transit' %}
+    const driverLat = {{ load.current_lat }};
+    const driverLng = {{ load.current_lng }};
+
+    const driverMarker = L.marker([driverLat, driverLng], {
+        icon: L.divIcon({
+            className: 'driver-marker',
+            html: '<div style="background: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+            iconSize: [24, 24]
+        })
+    }).addTo(map);
+
+    driverMarker.bindPopup(`
+        <strong>Current Driver Location</strong><br>
+        Progress: {{ (load.progress * 100)|int if load.progress else 0 }}%<br>
+        Last update: {{ load.last_location_update.strftime('%m/%d/%Y %I:%M %p') if load.last_location_update else 'N/A' }}
+    `);
+    {% endif %}
+
+    // Fit map to show all markers
+    const group = new L.featureGroup([pickupMarker, dropoffMarker{% if load.current_lat and load.current_lng and load.status == 'in_transit' %}, driverMarker{% endif %}]);
+    map.fitBounds(group.getBounds().pad(0.1));
+    {% else %}
+    // No coordinates available
+    document.getElementById('route-map').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted);">Map data not available</div>';
+    {% endif %}
+</script>
+{% endblock %}

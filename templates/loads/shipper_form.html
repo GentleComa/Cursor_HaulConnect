@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Post New Load - HaulConnect{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl);">
+    <h1>Post New Load</h1>
+    <a href="{{ url_for('loads.quote_form') }}" class="btn btn-outline">Get Quote First</a>
+</div>
+
+{% if quote_data %}
+<div class="card"
+    style="margin-bottom: var(--space-lg); background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-weight: 500; margin-bottom: var(--space-xs);">Quote Data Pre-filled</div>
+            <div class="text-muted" style="font-size: 0.9rem;">Estimated cost: ${{
+                "%.2f"|format(quote_data.estimated_cost) }} • {{ quote_data.miles }} miles • {{ quote_data.weight }} lbs
+            </div>
+        </div>
+        <a href="{{ url_for('loads.quote_form') }}" style="color: var(--color-primary); font-size: 0.9rem;">Get New
+            Quote</a>
+    </div>
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('loads.shipper_create') }}" class="card" style="max-width: 800px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h3 style="margin-bottom: var(--space-lg);">Origin</h3>
+    <div
+        style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-xl);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">City *</label>
+            <input type="text" name="origin_city" required
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">State *</label>
+            <input type="text" name="origin_state" required maxlength="2" placeholder="CA"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">ZIP</label>
+            <input type="text" name="origin_zip" maxlength="10"
+                value="{{ quote_data.pickup_zip if quote_data else '' }}"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+
+    <h3 style="margin-bottom: var(--space-lg);">Destination</h3>
+    <div
+        style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-xl);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">City *</label>
+            <input type="text" name="destination_city" required
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">State *</label>
+            <input type="text" name="destination_state" required maxlength="2" placeholder="TX"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">ZIP</label>
+            <input type="text" name="destination_zip" maxlength="10"
+                value="{{ quote_data.dropoff_zip if quote_data else '' }}"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+
+    <h3 style="margin-bottom: var(--space-lg);">Load Details</h3>
+    <div
+        style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Equipment Type *</label>
+            <select name="equipment_type" required
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+                <option value="">Select...</option>
+                <option value="dry_van">Dry Van</option>
+                <option value="flatbed">Flatbed</option>
+                <option value="reefer">Reefer</option>
+                <option value="tanker">Tanker</option>
+            </select>
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Distance (miles) *</label>
+            <input type="number" name="distance" required min="40" max="400" placeholder="40-400"
+                value="{{ quote_data.miles if quote_data else '' }}"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Weight (lbs)</label>
+            <input type="number" name="weight" min="500" max="28000" placeholder="500-28000"
+                value="{{ quote_data.weight if quote_data else '' }}"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Rate ($) *</label>
+            <input type="number" name="rate" required min="0" step="0.01"
+                value="{{ quote_data.estimated_cost if quote_data else '' }}"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+            {% if quote_data %}
+            <small class="text-muted" style="font-size: 0.85rem;">Pre-filled from quote</small>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-lg);">
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Pickup Date *</label>
+            <input type="date" name="pickup_date" required
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+        <div>
+            <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Commodity</label>
+            <input type="text" name="commodity" placeholder="e.g., Electronics, Food Products"
+                style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text);">
+        </div>
+    </div>
+
+    <div style="margin-bottom: var(--space-xl);">
+        <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Special Instructions</label>
+        <textarea name="special_instructions" rows="3" placeholder="Any special requirements or notes..."
+            style="width: 100%; padding: var(--space-sm); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); font-family: inherit;"></textarea>
+    </div>
+
+    <div style="display: flex; gap: var(--space-md);">
+        <button type="submit" class="btn btn-primary">Post Load</button>
+        <a href="{{ url_for('loads.shipper_list') }}" class="btn btn-outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}
